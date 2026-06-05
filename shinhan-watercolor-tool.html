@@ -1,0 +1,2188 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>수채화 조색 도구</title>
+  <meta name="description" content="신한 SWC 32색과 틴트 12색을 기반으로 조색, 명도 단계, 채색 가이드, 이미지 색상 매칭을 제공하는 인터랙티브 수채화 도구">
+  <meta name="theme-color" content="#ee6728">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="수채화 조색">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="watercolor-icon-180.png">
+  <link rel="icon" href="watercolor-icon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #222222;
+      --muted: #686868;
+      --line: #ded9d1;
+      --paper: #fbfaf7;
+      --panel: #ffffff;
+      --panel-soft: #fffdf9;
+      --control: #ffffff;
+      --tab-bg: #f2ede6;
+      --chip-bg: #f4f0ea;
+      --accent: #ee6728;
+      --accent-weak: #fff0e8;
+      --warn-bg: #fff5ee;
+      --warn-line: #f1c7b3;
+      --warn-ink: #71412b;
+      --shadow: 0 14px 36px rgba(38, 31, 24, .10);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
+    }
+
+    body.dark {
+      color-scheme: dark;
+      --ink: #f3eee8;
+      --muted: #beb5aa;
+      --line: #514941;
+      --paper: #181614;
+      --panel: #24211e;
+      --panel-soft: #201d1a;
+      --control: #2b2723;
+      --tab-bg: #302b26;
+      --chip-bg: #373129;
+      --accent: #ff7a35;
+      --accent-weak: #463022;
+      --warn-bg: #33251f;
+      --warn-line: #6c4533;
+      --warn-ink: #ffd1bd;
+      --shadow: 0 14px 36px rgba(0, 0, 0, .28);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+    }
+
+    button, input, select {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: minmax(320px, 440px) minmax(0, 1fr);
+    }
+
+    aside {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+      border-right: 1px solid var(--line);
+      background: var(--panel-soft);
+      padding: 24px;
+    }
+
+    main {
+      padding: 24px;
+      display: grid;
+      gap: 18px;
+      align-content: start;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 28px;
+      line-height: 1.15;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+    }
+
+    h3 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .lead {
+      margin-bottom: 18px;
+      font-size: 14px;
+    }
+
+    .js-warning {
+      margin: 0 0 14px;
+      border: 1px solid var(--warn-line);
+      border-radius: 8px;
+      background: var(--warn-bg);
+      color: var(--warn-ink);
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    body.js-ready .js-warning {
+      display: none;
+    }
+
+    .top-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .mode-toggle {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--ink);
+      cursor: pointer;
+      padding: 7px 11px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .tabs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      margin: 18px 0;
+      padding: 4px;
+      background: var(--tab-bg);
+      border-radius: 8px;
+    }
+
+    .tab {
+      border: 0;
+      border-radius: 6px;
+      padding: 9px 8px;
+      color: #4d463f;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    body.dark .tab {
+      color: var(--muted);
+    }
+
+    .tab.active {
+      color: #ffffff;
+      background: var(--accent);
+      font-weight: 700;
+    }
+
+    .action-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .action-button {
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      cursor: pointer;
+      padding: 9px 12px;
+      font-weight: 700;
+    }
+
+    .ghost-button {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      color: var(--ink);
+      cursor: pointer;
+      padding: 9px 12px;
+    }
+
+    .search {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .search input, .control input, .control select {
+      width: 100%;
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: var(--control);
+      color: var(--ink);
+    }
+
+    .control input[type="checkbox"] {
+      width: auto;
+      min-height: auto;
+      justify-self: start;
+      accent-color: var(--accent);
+    }
+
+    .palette {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+      gap: 7px;
+    }
+
+    .paint {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px;
+      background: var(--control);
+      cursor: pointer;
+      text-align: center;
+      transition: transform .12s ease, border-color .12s ease;
+      min-height: 78px;
+    }
+
+    .paint:hover, .paint.selected {
+      transform: translateY(-1px);
+      border-color: var(--accent);
+    }
+
+    .swatch {
+      height: 30px;
+      border-radius: 6px;
+      margin-bottom: 5px;
+      border: 1px solid rgba(0, 0, 0, .08);
+      box-shadow: inset 12px 0 16px rgba(0, 0, 0, .18), inset -14px 0 18px rgba(255, 255, 255, .28);
+    }
+
+    .paint strong {
+      display: block;
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .paint span {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.15;
+    }
+
+    .paint .paint-extra {
+      display: none;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      padding: 18px;
+      box-shadow: var(--shadow);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .details {
+      display: grid;
+      grid-template-columns: 110px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .detail-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .detail-toggle {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel-soft);
+      color: var(--ink);
+      cursor: pointer;
+      padding: 6px 10px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .detail-collapsed .detail-body {
+      display: none;
+    }
+
+    .detail-collapsed .details {
+      grid-template-columns: 56px minmax(0, 1fr);
+      align-items: center;
+    }
+
+    .detail-collapsed .big-swatch {
+      height: 42px;
+    }
+
+    .big-swatch {
+      height: 108px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, .08);
+      box-shadow: inset 20px 0 26px rgba(0, 0, 0, .22), inset -20px 0 28px rgba(255, 255, 255, .30);
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 10px 0;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      border-radius: 999px;
+      padding: 4px 8px;
+      background: var(--chip-bg);
+      color: #514a43;
+      font-size: 12px;
+    }
+
+    body.dark .pill {
+      color: var(--ink);
+    }
+
+    .mix-controls {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .control {
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .mix-preview {
+      min-height: 132px;
+      display: grid;
+      grid-template-columns: 150px minmax(0, 1fr);
+      gap: 16px;
+      align-items: center;
+      margin-top: 16px;
+    }
+
+    .mixed-chip {
+      height: 118px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, .1);
+      background: var(--mix-color, #ddd);
+      box-shadow: inset 20px 0 28px rgba(0, 0, 0, .16), inset -22px 0 26px rgba(255, 255, 255, .24);
+    }
+
+    .ratio-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      margin: 8px 0;
+    }
+
+    .ratio-row input {
+      accent-color: var(--accent);
+    }
+
+    .combo-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .combo {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: var(--panel-soft);
+    }
+
+    .combo header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 7px;
+      font-weight: 700;
+    }
+
+    .combo small {
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .strips {
+      display: flex;
+      gap: 5px;
+      margin-top: 9px;
+    }
+
+    .wash-strip {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .mini {
+      width: 34px;
+      height: 22px;
+      border-radius: 5px;
+      border: 1px solid rgba(0, 0, 0, .08);
+    }
+
+    button.mini {
+      padding: 0;
+      cursor: pointer;
+    }
+
+    .guide-layout {
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .guide-menu {
+      display: grid;
+      gap: 8px;
+    }
+
+    .guide-categories {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .category-button {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel-soft);
+      color: var(--ink);
+      cursor: pointer;
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+
+    .category-button.active {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    .guide-search {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--control);
+      color: var(--ink);
+      padding: 10px;
+    }
+
+    .guide-chip-list {
+      display: grid;
+      gap: 8px;
+      max-height: 520px;
+      overflow: auto;
+      padding-right: 2px;
+    }
+
+    .guide-chip {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      color: var(--ink);
+      cursor: pointer;
+      padding: 10px;
+      text-align: left;
+    }
+
+    .guide-chip.active {
+      border-color: var(--accent);
+      background: var(--accent-weak);
+      font-weight: 700;
+    }
+
+    .guide-result {
+      display: grid;
+      gap: 14px;
+    }
+
+    .step-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .value-step {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+      min-height: 132px;
+    }
+
+    .value-step .mini {
+      width: 100%;
+      height: 46px;
+      min-height: 46px;
+      margin: 0;
+      border-radius: 6px;
+    }
+
+    .value-step strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+
+    .value-step .recipe {
+      color: var(--ink);
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1.45;
+      margin-bottom: 5px;
+    }
+
+    .value-step .note {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .ordered {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      counter-reset: paint-step;
+    }
+
+    .ordered li {
+      counter-increment: paint-step;
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: var(--panel-soft);
+    }
+
+    .ordered li::before {
+      content: counter(paint-step);
+      display: grid;
+      place-items: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .warning {
+      border: 1px solid var(--warn-line);
+      border-radius: 8px;
+      background: var(--warn-bg);
+      color: var(--warn-ink);
+      padding: 11px 12px;
+      line-height: 1.45;
+      font-size: 13px;
+    }
+
+    .sim-layout {
+      display: grid;
+      grid-template-columns: minmax(280px, 420px) minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+      margin-top: 16px;
+    }
+
+    .sim-panel {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .preset-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .preset-button {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      color: var(--ink);
+      cursor: pointer;
+      padding: 10px;
+      text-align: left;
+    }
+
+    .preset-button.active {
+      border-color: var(--accent);
+      background: var(--accent-weak);
+      font-weight: 700;
+    }
+
+    .slider-mixer {
+      display: grid;
+      gap: 10px;
+    }
+
+    .paint-slider {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .paint-slider header {
+      display: grid;
+      grid-template-columns: 34px minmax(0, 1fr) auto auto;
+      gap: 9px;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .paint-slider input {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .result-chip {
+      min-height: 160px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 0, 0, .1);
+      background: var(--sim-result, #ddd);
+      box-shadow: inset 26px 0 34px rgba(0, 0, 0, .16), inset -28px 0 32px rgba(255, 255, 255, .26);
+    }
+
+    .result-code {
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    .value-scale {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .value-chip {
+      display: grid;
+      gap: 7px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      background: var(--panel-soft);
+      min-width: 0;
+    }
+
+    .value-chip .mini {
+      width: 100%;
+      height: 48px;
+    }
+
+    .value-chip strong, .value-chip span {
+      overflow-wrap: anywhere;
+    }
+
+    .complement-box {
+      display: grid;
+      grid-template-columns: 86px minmax(0, 1fr);
+      gap: 12px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      padding: 10px;
+    }
+
+    .complement-chip {
+      width: 86px;
+      height: 72px;
+    }
+
+    .palette-analysis {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .analysis-card {
+      display: grid;
+      grid-template-columns: 54px minmax(0, 1fr);
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: var(--panel-soft);
+    }
+
+    .analysis-card .mini {
+      width: 54px;
+      height: 48px;
+    }
+
+    .image-zone {
+      display: grid;
+      grid-template-columns: minmax(360px, .9fr) minmax(360px, 1.1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      min-height: 360px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--control);
+      cursor: crosshair;
+    }
+
+    .matches {
+      display: grid;
+      gap: 10px;
+    }
+
+    .match {
+      display: grid;
+      grid-template-columns: 48px minmax(0, 1fr);
+      gap: 10px;
+      align-items: center;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px;
+      background: var(--panel-soft);
+    }
+
+    .match .mini {
+      width: 48px;
+      height: 42px;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .empty {
+      min-height: 120px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      padding: 18px;
+    }
+
+    @media (max-width: 920px) {
+      .app {
+        display: block;
+      }
+
+      aside {
+        position: static;
+        height: auto;
+      }
+
+      .grid-2, .image-zone, .mix-preview, .guide-layout, .sim-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 560px) {
+      aside, main {
+        padding: 16px;
+      }
+
+      .mix-controls, .step-grid, .value-scale, .preset-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .details {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="top-actions">
+        <h1>수채화 조색 도구</h1>
+        <button class="mode-toggle" id="modeToggle" type="button">다크</button>
+      </div>
+      <p class="lead">입시미술에서 자주 쓰는 32색 세트를 기준으로 조색, 명도 단계, 채색 순서, 이미지 색상 매칭을 안내합니다.</p>
+      <div class="js-warning">
+        이 화면은 색상 데이터와 버튼 기능을 불러오지 못한 상태입니다. iPhone의 파일 미리보기/문서 뷰어에서는 JavaScript가 실행되지 않을 수 있으니 Safari 또는 웹 URL로 열어 주세요.
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="보기 선택">
+        <button class="tab active" data-view="palette" type="button">팔레트</button>
+        <button class="tab" data-view="guide" type="button">가이드</button>
+        <button class="tab" data-view="mix" type="button">조색</button>
+        <button class="tab" data-view="image" type="button">이미지</button>
+      </div>
+
+      <label class="search">
+        <span class="muted">색 이름, 안료, 용도 검색</span>
+        <input id="search" type="search" placeholder="예: 그림자, PR83, 피부, 하늘">
+      </label>
+      <label class="control" style="margin-bottom:14px;">
+        <span>특색 틴트 12색 사용</span>
+        <input id="tintToggle" type="checkbox">
+      </label>
+
+      <div id="palette" class="palette"></div>
+    </aside>
+
+    <main>
+      <section class="card" id="paintDetail"></section>
+
+      <section class="card view view-palette">
+        <h2>자주 쓰는 색 조합</h2>
+        <div class="combo-list" id="comboList"></div>
+      </section>
+
+      <section class="card view view-guide" hidden>
+        <h2>인터랙티브 채색 가이드</h2>
+        <p class="muted">개체나 상황을 고르면 필요한 색, 명도 단계, 칠하는 순서, 주의점을 함께 보여줍니다.</p>
+        <div class="guide-layout">
+          <div class="guide-menu">
+            <label>
+              <span class="muted">가이드 검색</span>
+              <input class="guide-search" id="guideSearch" type="search" placeholder="예: 피부, 노을, 유리, 틴트">
+            </label>
+            <div class="guide-categories" id="guideCategories"></div>
+            <div class="guide-chip-list" id="guideChipList"></div>
+          </div>
+          <div class="guide-result" id="guideResult"></div>
+        </div>
+      </section>
+
+      <section class="card view view-mix" hidden>
+        <h2>SWC 32색 기반 조색 시뮬레이터</h2>
+        <p class="muted">팔레트에서 원하는 색을 추가/제거하고 각 색의 비율을 조절하면 결과 컬러, 5단계 명도, 보색 가이드가 실시간으로 바뀝니다.</p>
+        <div class="sim-layout">
+          <div class="sim-panel">
+            <h3>선택한 팔레트 색 비율</h3>
+            <div class="action-row">
+              <button class="ghost-button" id="addSelectedPaint" type="button">현재 선택 색 추가</button>
+              <button class="ghost-button" id="clearMixPaints" type="button">조색 색 비우기</button>
+            </div>
+            <div id="sliderMixer" class="slider-mixer"></div>
+          </div>
+          <div class="sim-panel result-panel">
+            <h3>결과 컬러 칩</h3>
+            <div class="result-chip" id="simResultChip"></div>
+            <div class="result-code" id="simResultCode"></div>
+            <div class="meta" id="simMixMeta"></div>
+            <h3>5단계 명도 단계</h3>
+            <div class="value-scale" id="valueScale"></div>
+            <h3>실시간 보색 추천</h3>
+            <div class="complement-box">
+              <div class="mini complement-chip" id="complementChip"></div>
+              <div>
+                <strong id="complementCode"></strong>
+                <p class="muted" id="complementText"></p>
+              </div>
+            </div>
+            <div class="warning" id="realismNote"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card view view-image" hidden>
+        <h2>이미지 컬러팔레트 분석</h2>
+        <div class="image-zone">
+          <div>
+            <label class="control">이미지 파일 선택<input id="imageInput" type="file" accept="image/*"></label>
+            <canvas id="imageCanvas" width="420" height="420" aria-label="업로드 이미지 캔버스"></canvas>
+          </div>
+          <div>
+            <h3>이미지 팔레트와 추천 조색</h3>
+            <div id="pickedColor" class="mixed-chip" style="height:76px;margin-bottom:12px;"></div>
+            <div class="matches" id="matches">
+              <div class="empty">이미지를 올리면 한 장의 주요 컬러팔레트를 자동 분석합니다. 분석 후 색칩이나 캔버스를 클릭하면 상세 조색을 볼 수 있습니다.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    document.body.classList.add("js-ready");
+
+    const paints = [
+      { code: "A803", name: "Crimson Lake", ko: "크림슨 레이크", pigment: "PR83 PR63:1", grade: "투명한 청적색", hex: "#a90d2d", traits: "강한 붉은 기와 투명감. 어두운 혼색에서 깊이가 잘 난다.", uses: "꽃, 입술, 붉은 천의 그림자, 와인색 포인트", caution: "녹색과 만나면 빠르게 탁해지므로 소량씩." },
+      { code: "A807", name: "Permanent Rose", ko: "퍼머넌트 로즈", pigment: "BV11:1 PV19", grade: "맑은 장미색", hex: "#e52c4f", traits: "차갑고 선명한 분홍. 보라와 피부 홍조에 유리하다.", uses: "피부 혈색, 꽃잎, 노을 보라, 채도 높은 분홍", caution: "노랑과 섞으면 형광기가 약해지니 물 조절." },
+      { code: "D811", name: "Rose Madder", ko: "로즈 매더", pigment: "PR83", grade: "깊은 장미적", hex: "#9f0710", traits: "어둡고 농도감 있는 적색. 고전적인 붉은 그림자에 적합.", uses: "붉은 사과 암부, 천, 깊은 꽃잎", caution: "두껍게 쓰면 갈색 기운이 올라온다." },
+      { code: "B821", name: "Opera", ko: "오페라", pigment: "PR81", grade: "형광 분홍", hex: "#ff0f6b", traits: "가장 밝고 튀는 분홍. 시선 집중용 포인트색.", uses: "꽃 하이라이트, 장식, 네온감, 생기 보정", caution: "넓게 쓰면 화면이 가벼워 보일 수 있다." },
+      { code: "A814", name: "Permanent Red", ko: "퍼머넌트 레드", pigment: "PR209 PR48:1", grade: "기본 선홍", hex: "#dc251f", traits: "따뜻한 붉은색. 노랑, 갈색과 안정적으로 섞인다.", uses: "사과, 토마토, 붉은 플라스틱, 피부 붉은기", caution: "파랑과 섞을 때는 탁한 자주가 되기 쉽다." },
+      { code: "B833", name: "Vermilion Hue", ko: "버밀리온 휴", pigment: "PO16", grade: "주황빛 빨강", hex: "#f04a1c", traits: "불투명감 있는 따뜻한 빨강. 면을 살리기 좋다.", uses: "귤, 감, 따뜻한 조명, 붉은 암부의 온도", caution: "차가운 그림자에는 보라 계열로 중화." },
+      { code: "C840", name: "Perm Yellow Orange", ko: "퍼머넌트 옐로 오렌지", pigment: "PY83 PO13", grade: "진한 노랑주황", hex: "#f56b15", traits: "채도 높은 주황. 빛 받는 과일색에 빠르다.", uses: "오렌지, 황금빛 조명, 낙엽, 피부 온기", caution: "과용하면 화면 전체가 뜨거워진다." },
+      { code: "C843", name: "Cad Yellow Orange", ko: "카드 옐로 오렌지", pigment: "PY35 PO20", grade: "밝은 주황", hex: "#fb7e18", traits: "밝고 단단한 노랑주황. 포스터처럼 선명하다.", uses: "감귤 하이라이트, 장난감, 인공물", caution: "보색 혼색 시 불투명하게 탁해질 수 있다." },
+      { code: "C856", name: "Perm Yellow Deep", ko: "퍼머넌트 옐로 딥", pigment: "PY1 PY83", grade: "진한 노랑", hex: "#f29405", traits: "따뜻한 기본 노랑. 녹색과 주황 양쪽에 잘 간다.", uses: "나무 빛, 빵, 과일 중간톤, 노을", caution: "파랑과 섞으면 자연 녹색, 과하면 탁함." },
+      { code: "A858", name: "Permanent Yellow Light", ko: "퍼머넌트 옐로 라이트", pigment: "PY1", grade: "밝은 노랑", hex: "#fbc62b", traits: "깨끗한 밝은 노랑. 밝은 면을 유지하기 쉽다.", uses: "밝은 과일, 빛 번짐, 연두 조색", caution: "어두운 색 위에 올리면 힘이 약하다." },
+      { code: "A861", name: "Lemon Yellow", ko: "레몬 옐로", pigment: "PY81 PW6", grade: "차가운 연노랑", hex: "#f5ef35", traits: "녹색 쪽으로 기운 밝은 노랑. 청량한 빛 표현.", uses: "새순, 형광빛, 하이라이트, 차가운 노랑 물체", caution: "백색 안료감 때문에 두껍게 쓰면 분필 느낌." },
+      { code: "D868", name: "Greenish Yellow", ko: "그리니시 옐로", pigment: "PY129", grade: "흙빛 황록", hex: "#8a7a1d", traits: "낮은 채도의 황록. 자연물 중간 암부에 좋다.", uses: "마른 잎, 국방색 천, 오래된 과일 껍질", caution: "밝은 연두에는 레몬 옐로로 보정." },
+      { code: "B870", name: "Olive Green", ko: "올리브 그린", pigment: "PY83 PG8", grade: "어두운 올리브", hex: "#68712d", traits: "누런 녹색. 자연물 그림자를 빠르게 잡는다.", uses: "잎 암부, 병, 군청색 천의 중화", caution: "넓게 쓰면 낡은 느낌이 강하다." },
+      { code: "C874", name: "Permanent Green 1", ko: "퍼머넌트 그린 1", pigment: "PG7", grade: "선명한 초록", hex: "#20a936", traits: "강한 인공 초록. 채도 조절의 기준점.", uses: "플라스틱 초록, 식물 포인트, 청록 조색", caution: "자연 잎에는 옐로 오커나 번트 엄버로 죽여 쓰기." },
+      { code: "B883", name: "Hooker's Green", ko: "후커스 그린", pigment: "PG7 PG8", grade: "깊은 녹색", hex: "#136f46", traits: "차분하고 짙은 녹색. 잎의 구조감에 좋다.", uses: "상록수, 잎 암부, 유리병 그림자", caution: "검정처럼 쓰지 말고 파랑/갈색으로 온도 조절." },
+      { code: "C879", name: "Sap Green", ko: "샙 그린", pigment: "PG7 PG8", grade: "밝은 자연 녹색", hex: "#77a34b", traits: "노란 기가 있는 자연 초록. 식물 기본색.", uses: "잎 중간톤, 채소, 풀밭, 자연물 반사광", caution: "암부는 울트라마린이나 세피아로 깊이." },
+      { code: "A888", name: "Viridian Hue", ko: "비리디언 휴", pigment: "PG7", grade: "청록", hex: "#109b8b", traits: "차갑고 맑은 청록. 유리, 물, 차가운 그림자에 좋다.", uses: "유리병, 바다, 그림자 반사광, 청록 천", caution: "붉은색과 만나면 강하게 중화된다." },
+      { code: "B911", name: "Peacock Blue", ko: "피콕 블루", pigment: "PB15:3", grade: "밝은 청색", hex: "#0d8dd8", traits: "깨끗하고 밝은 하늘색. 물 조절 폭이 넓다.", uses: "맑은 하늘, 유리, 물, 밝은 파랑 물체", caution: "그림자에는 프러시안이나 인디고를 섞어 깊이." },
+      { code: "A920", name: "Cerulean Blue Hue", ko: "세룰리언 블루 휴", pigment: "PR81", grade: "연한 하늘색", hex: "#118fd0", traits: "가볍고 부드러운 파랑. 하늘과 밝은 반사광에 적합.", uses: "구름 주변 하늘, 유리 하이라이트, 차가운 밝은 면", caution: "강한 암부 조색에는 힘이 약하다." },
+      { code: "A923", name: "Cobalt Blue Hue", ko: "코발트 블루 휴", pigment: "PB29 PB15:3", grade: "중간 파랑", hex: "#1f5fa9", traits: "균형 잡힌 기본 파랑. 너무 차갑지 않아 안정적.", uses: "하늘 중간톤, 흰 물체 그림자, 도자기", caution: "초록 조색은 피콕보다 차분하게 나온다." },
+      { code: "B926", name: "Ultramarine Deep", ko: "울트라마린 딥", pigment: "PB29", grade: "보라기 파랑", hex: "#2436c8", traits: "붉은 기가 있는 깊은 파랑. 보라 그림자에 강하다.", uses: "천 그림자, 흰 물체 암부, 보라, 원근감", caution: "노랑과 섞으면 회색 녹색으로 빠르게 죽는다." },
+      { code: "A928", name: "Prussian Blue", ko: "프러시안 블루", pigment: "PB27", grade: "강한 남청", hex: "#0b4774", traits: "착색력이 강한 어두운 청색. 소량으로도 화면을 잡는다.", uses: "깊은 그림자, 금속 반사, 밤하늘, 청록 암부", caution: "조금만 많이 넣어도 전체가 어두워진다." },
+      { code: "A933", name: "Indigo", ko: "인디고", pigment: "PB66 PG7", grade: "회청색", hex: "#4c6170", traits: "회색기가 있는 깊은 파랑. 차가운 암부를 빠르게 만든다.", uses: "검정 대용, 차가운 그림자, 금속, 도시 배경", caution: "맑은 파랑에는 피콕/코발트를 섞어 보정." },
+      { code: "D938", name: "Permanent Violet", ko: "퍼머넌트 바이올렛", pigment: "PV3 PB29 PR122", grade: "짙은 보라", hex: "#6b3b93", traits: "붉은기와 파랑기가 균형 잡힌 보라. 그림자 온도 조절에 좋다.", uses: "흰 물체 보라 그림자, 꽃, 밤 조명, 반사광", caution: "노랑과 만나면 탁한 회갈색이 된다." },
+      { code: "B957", name: "Brown Red", ko: "브라운 레드", pigment: "PBr25", grade: "붉은 갈색", hex: "#773321", traits: "따뜻하고 짙은 갈색. 목재와 피부 암부에 안정적.", uses: "나무, 머리카락, 가죽, 사과 암부", caution: "밝은 피부에는 라이트 레드와 옐로 오커로 희석." },
+      { code: "A959", name: "Light Red", ko: "라이트 레드", pigment: "PR101 PBr25", grade: "살구빛 적갈색", hex: "#b65b3d", traits: "흙빛이 있는 밝은 적색. 피부와 벽돌색에 편하다.", uses: "피부 그림자, 테라코타, 벽돌, 빵", caution: "차가운 부분은 코발트/바이올렛으로 눌러준다." },
+      { code: "A963", name: "Burnt Sienna", ko: "번트 시에나", pigment: "PR101 PY83", grade: "주황 갈색", hex: "#b74716", traits: "투명감 있는 따뜻한 갈색. 수채화다운 깊이가 난다.", uses: "나무, 흙, 머리카락, 노을 그림자", caution: "프러시안과 섞으면 강한 암회색." },
+      { code: "B964", name: "Burnt Umber", ko: "번트 엄버", pigment: "PBr7", grade: "어두운 갈색", hex: "#6a3a27", traits: "중립에 가까운 짙은 갈색. 화면을 차분히 잡는다.", uses: "나무 암부, 토양, 사물 밑 그림자, 명도 낮춤", caution: "밝은 색과 섞을 때 탁함 관리." },
+      { code: "B966", name: "Raw Umber", ko: "로 엄버", pigment: "PR101", grade: "노란 갈색", hex: "#a05a20", traits: "생 흙 같은 갈색. 따뜻한 중간톤에 좋다.", uses: "마른 나무, 종이, 빵 껍질, 자연물 밑색", caution: "어두운 암부는 번트 엄버/인디고로 보강." },
+      { code: "A970", name: "Yellow Ochre", ko: "옐로 오커", pigment: "PY42 PO62", grade: "황토색", hex: "#c98d2a", traits: "안정적인 저채도 노랑. 거의 모든 자연물에 섞기 좋다.", uses: "피부 기본톤, 흙, 나무, 금속 반사, 빵", caution: "맑은 노랑이 필요할 때는 너무 많이 넣지 않기." },
+      { code: "B975", name: "Vandyke Brown 1", ko: "반다이크 브라운 1", pigment: "NBr8", grade: "깊은 흑갈색", hex: "#4a3328", traits: "무게감 있는 어두운 갈색. 검정 대신 자연스러운 암부.", uses: "나무 깊은 암부, 머리카락, 가죽, 접지 그림자", caution: "채도를 죽이는 힘이 커서 마지막에 소량." },
+      { code: "A977", name: "Sepia", ko: "세피아", pigment: "PR101 PBk11", grade: "회갈색", hex: "#5b5048", traits: "회색기가 있는 갈색. 차분한 그림자와 빈티지 톤.", uses: "스케치 밑색, 접지 그림자, 금속 반사, 낡은 소재", caution: "넓게 쓰면 화면이 무거워지니 밝은 색 면 확보." }
+    ];
+
+    const tintPaints = [
+      { code: "B823", name: "Brilliant Pink", ko: "브릴리언트 핑크", pigment: "PR209 PV6", grade: "틴트 고명도 분홍", hex: "#e75c85", traits: "흰색 안료가 섞인 파스텔 핑크. 부드러운 홍조와 장식 포인트에 빠르다.", uses: "피부 홍조, 꽃, 네온보다 부드러운 분홍 포인트", caution: "일반 투명 수채화보다 불투명하고 탁해질 수 있어 마지막 보정에 적합.", tint: true },
+      { code: "A825", name: "Shell Pink", ko: "쉘 핑크", pigment: "PO34 PR계열 PW6", grade: "틴트 살구분홍", hex: "#f3b5aa", traits: "밝은 살구빛 핑크. 피부 밝은 면을 빠르게 만들 수 있다.", uses: "밝은 피부, 손끝, 볼, 부드러운 천", caution: "피부 전체에 과하게 쓰면 분필처럼 뜰 수 있다.", tint: true },
+      { code: "A863", name: "Naples Yellow", ko: "네이플스 옐로", pigment: "PY35 PBr24 PW6", grade: "틴트 크림 노랑", hex: "#f5c96f", traits: "불투명한 크림 노랑. 따뜻한 빛과 피부 밝은 면에 좋다.", uses: "피부 하이라이트, 빵, 따뜻한 조명, 벽면", caution: "맑은 노랑 대신 넓게 쓰면 무겁게 보일 수 있다.", tint: true },
+      { code: "A866", name: "Jaune Brilliant 2", ko: "존 브릴리언트 2", pigment: "PO20 PW6", grade: "틴트 살구주황", hex: "#eca875", traits: "밝은 살구 주황. 노을빛 피부와 따뜻한 반사광에 유용하다.", uses: "피부 온기, 노을 반사, 복숭아색 소품", caution: "붉은색과 많이 섞으면 탁한 살구색이 된다.", tint: true },
+      { code: "B890", name: "Emerald Green Nova", ko: "에메랄드 그린 노바", pigment: "PY3 PG7 PW6", grade: "틴트 민트초록", hex: "#2ca96a", traits: "선명하지만 흰기가 있는 민트 초록. 밝은 식물과 디자인 소품에 좋다.", uses: "민트 소품, 밝은 잎, 판타지 이펙트", caution: "자연 잎에는 옐로 오커나 세피아로 눌러준다.", tint: true },
+      { code: "A892", name: "Green Pale", ko: "그린 페일", pigment: "PG7 PY74 PW6", grade: "틴트 연초록", hex: "#8fc794", traits: "연하고 부드러운 초록. 새싹과 배경 녹색 워시에 빠르다.", uses: "새순, 밝은 풀, 민트톤 피부, 배경", caution: "암부에는 힘이 약하므로 후커스 그린이나 인디고가 필요하다.", tint: true },
+      { code: "A913", name: "Horizon Blue", ko: "호라이즌 블루", pigment: "PG7 PB15 PW6", grade: "틴트 청록하늘", hex: "#28a9bd", traits: "밝은 청록 하늘색. 물, 유리, 판타지 반사광에 좋다.", uses: "물빛, 유리 하이라이트, 청록 이펙트", caution: "그림자에는 단독으로 약하니 프러시안/인디고로 깊이를 준다.", tint: true },
+      { code: "A915", name: "Blue Grey", ko: "블루 그레이", pigment: "PB15:3 PB29 PW6", grade: "틴트 회청색", hex: "#37a9df", traits: "흰기 있는 푸른 회색. 차가운 원경과 금속 밝은 반사에 좋다.", uses: "원경, 하늘, 금속 반사, 흰 물체 그림자", caution: "진한 암부에는 인디고나 프러시안이 필요하다.", tint: true },
+      { code: "B936", name: "Lavender", ko: "라벤더", pigment: "PB28 PV15 PW6", grade: "틴트 연보라", hex: "#8d9bc5", traits: "부드러운 연보라. 흰 물체 그림자와 감성 조명에 유용하다.", uses: "석고 그림자, 구름 그림자, 보라 반사광", caution: "노랑 위에 두껍게 얹으면 회색 탁함이 생길 수 있다.", tint: true },
+      { code: "A944", name: "Lilac", ko: "라일락", pigment: "PR122 PV23 PW6", grade: "틴트 분보라", hex: "#b07bb3", traits: "붉은기 있는 밝은 보라. 피부 그림자와 마법광에 쓰기 쉽다.", uses: "노을 그림자, 마법 이펙트, 부드러운 보라 천", caution: "넓게 쓰면 화면이 달아 보일 수 있어 면적을 조절한다.", tint: true },
+      { code: "A946", name: "Purple Grey", ko: "퍼플 그레이", pigment: "PR122 PW6", grade: "틴트 회보라", hex: "#a44f7d", traits: "채도가 낮은 붉은 보라. 어두운 피부 반사와 감성 그림자에 좋다.", uses: "역광 그림자, 입술 그림자, 보라 회색 배경", caution: "녹색과 섞을 때 빠르게 탁해진다.", tint: true },
+      { code: "B986", name: "Neutral Tint", ko: "뉴트럴 틴트", pigment: "PBk6 PBk11", grade: "특색 중성 암색", hex: "#232529", traits: "검정에 가까운 중성 틴트. 명도 낮춤과 가장 깊은 암부에 빠르다.", uses: "접지 그림자, 금속 암부, 검정 대용, 야경", caution: "입시 수채화에서는 너무 쉽게 어두워지므로 마지막에 극소량.", tint: true }
+    ];
+
+    const combos = [
+      { title: "밝은 피부", scene: "얼굴, 손, 캐릭터 기본 살색", colors: ["A970", "A807", "A858"], note: "옐로 오커 4 + 퍼머넌트 로즈 1 + 물 많이. 밝은 면은 종이를 남기고, 라이트 옐로는 따뜻한 하이라이트에만 소량." },
+      { title: "따뜻한 피부", scene: "실내 전구, 건강한 얼굴", colors: ["A970", "A959", "A858"], note: "옐로 오커 4 + 라이트 레드 2 + 라이트 옐로 1. 코와 볼에는 로즈를 아주 얇게 겹친다." },
+      { title: "붉어진 얼굴", scene: "운동, 당황, 감정 표현", colors: ["A807", "A959", "A970"], note: "퍼머넌트 로즈 2 + 라이트 레드 1 + 옐로 오커 1. 넓게 칠하지 말고 볼, 귀, 손끝 위주로 번짐 처리." },
+      { title: "창백한 피부", scene: "긴장, 병약함, 차가운 조명", colors: ["A923", "A807", "A970"], note: "코발트 블루를 물 많이 타고 로즈와 옐로 오커를 극소량. 회색을 바로 쓰면 죽은 피부가 되니 색기만 남긴다." },
+      { title: "피부 일반 그림자", scene: "얼굴 턱, 손가락 사이", colors: ["A959", "B911", "A970"], note: "라이트 레드 3 + 피콕 블루 아주 소량. 너무 차가워지면 옐로 오커로 다시 살린다." },
+      { title: "강한 명암 피부", scene: "역광 인물, 극적인 얼굴", colors: ["A963", "B926", "A807"], note: "번트 시에나 2 + 울트라마린 1. 어두운 피부 암부는 로즈를 얇게 겹치면 혈색이 남는다." },
+      { title: "기본 낮 하늘", scene: "맑은 배경, 원경", colors: ["A920", "A923", "A807"], note: "세룰리언을 물 많이 타서 넓게. 깊은 윗하늘은 코발트, 원경은 로즈 극소량으로 멀어 보이게 한다." },
+      { title: "여름 하늘", scene: "밝은 야외, 청량한 분위기", colors: ["B911", "A920", "A858"], note: "피콕 2 + 세룰리언 3. 노랑은 직접 섞기보다 빛 받는 흰 구름 주변에 아주 얇게 둔다." },
+      { title: "구름 그림자", scene: "흰 구름, 흰 천, 석고", colors: ["A923", "A959", "D938"], note: "코발트 4 + 라이트 레드 극소량 + 바이올렛 극소량. 물을 많이 써서 흰 종이가 살아야 한다." },
+      { title: "노을 노랑", scene: "석양 하늘 밝은 띠", colors: ["A858", "A970", "C840"], note: "라이트 옐로 4 + 옐로 오커 1. 주황 쪽으로 넘어가는 곳에 옐로 오렌지를 젖은 상태에서 연결." },
+      { title: "노을 주황", scene: "해 주변, 역광 배경", colors: ["C840", "B833", "A814"], note: "옐로 오렌지 3 + 버밀리온 2. 빨강은 가장 진한 구름 하단에만 넣어 촌스러움을 줄인다." },
+      { title: "보랏빛 노을 그림자", scene: "노을 구름 하단, 인물 그림자", colors: ["B821", "D938", "A923"], note: "오페라 1 + 바이올렛 2 + 코발트 2. 주황빛과 직접 과혼합하면 탁해지니 마른 뒤 겹친다." },
+      { title: "밤하늘 기본", scene: "밤 배경, 도시 야경", colors: ["A933", "A928", "D938"], note: "인디고 3 + 프러시안 1. 보랏빛 밤은 바이올렛을 더하고, 별 주변은 물로 살짝 들어낸다." },
+      { title: "새벽 공기", scene: "차갑고 먼 배경", colors: ["A920", "A807", "A933"], note: "세룰리언 4 + 로즈 극소량. 가장 먼 곳은 인디고를 물 많이 타서 명도만 낮춘다." },
+      { title: "밝은 새싹", scene: "어린 잎, 포인트 식물", colors: ["A861", "C874", "A858"], note: "레몬 옐로 3 + 퍼머넌트 그린 1. 너무 인공적이면 옐로 오커를 극소량 더한다." },
+      { title: "자연스러운 잎", scene: "나뭇잎 중간톤", colors: ["C879", "A970", "B870"], note: "샙 그린 3 + 옐로 오커 1. 올리브 그린은 아래쪽 눌린 면과 오래된 잎에 사용." },
+      { title: "어두운 잎", scene: "잎 겹침, 숲 암부", colors: ["B883", "A933", "B964"], note: "후커스 그린 3 + 인디고 1. 아주 깊은 곳은 번트 엄버를 소량 넣어 자연스럽게 죽인다." },
+      { title: "마른 풀", scene: "가을 풀, 낡은 자연물", colors: ["D868", "A970", "B964"], note: "그리니시 옐로 2 + 옐로 오커 2 + 번트 엄버 1. 밝은 끝은 라이트 옐로로 남긴다." },
+      { title: "기본 나무", scene: "목재, 나무기둥, 책상", colors: ["A963", "A970", "B964"], note: "번트 시에나 3 + 옐로 오커 2. 나뭇결 암부는 번트 엄버를 물 적게 써서 얇은 선으로." },
+      { title: "오래된 나무", scene: "낡은 가구, 오래된 문", colors: ["B966", "A977", "B975"], note: "로 엄버 2 + 세피아 2. 가장 깊은 틈은 반다이크 브라운으로 찍듯이 넣는다." },
+      { title: "마른 흙", scene: "운동장, 흙바닥", colors: ["A970", "B966", "A963"], note: "옐로 오커 3 + 로 엄버 2. 따뜻한 햇빛 쪽은 번트 시에나를 얇게 겹친다." },
+      { title: "젖은 흙", scene: "비 온 바닥, 어두운 땅", colors: ["B964", "A928", "A977"], note: "번트 엄버 3 + 프러시안 1. 반사되는 젖은 면은 세피아를 물 많이 타서 깔아준다." },
+      { title: "바위/콘크리트", scene: "돌, 회색 벽, 계단", colors: ["A977", "A923", "A970"], note: "세피아 2 + 코발트 2 + 옐로 오커 극소량. 균열은 세피아와 번트 엄버로 명도 차이를 준다." },
+      { title: "차가운 회색 벽", scene: "도시 배경, 실내 벽", colors: ["A933", "A923", "A959"], note: "인디고를 물 많이 타고 코발트로 온도 조절. 라이트 레드는 회색이 너무 파래질 때만 극소량." },
+      { title: "따뜻한 회색", scene: "실내 벽, 낡은 종이", colors: ["A977", "A923", "A970"], note: "세피아 1 + 코발트 2 + 물 많이. 옐로 오커를 아주 조금 넣으면 생활감 있는 회색이 된다." },
+      { title: "금속 기본 그림자", scene: "캔, 칼, 기계", colors: ["A933", "A977", "A923"], note: "인디고 2 + 세피아 1. 밝은 반사면 주변은 코발트를 물 많이 타서 차갑게 둔다." },
+      { title: "푸른 금속", scene: "차가운 철, 기계 부품", colors: ["A928", "A933", "B911"], note: "프러시안 2 + 인디고 2. 피콕은 날카로운 푸른 반사광에만 소량." },
+      { title: "녹슨 금속", scene: "오래된 철, 고장난 기계", colors: ["A963", "B966", "A977"], note: "번트 시에나 3 + 로 엄버 1 + 세피아 1. 가장 밝은 녹은 옐로 오렌지를 얇게." },
+      { title: "유리병", scene: "청록 유리, 투명 물체", colors: ["A888", "B911", "A928"], note: "비리디언과 피콕으로 맑은 면, 프러시안 아주 소량으로 두꺼운 겹침과 테두리." },
+      { title: "비닐/포장지 그림자", scene: "마트 봉지, 투명 포장", colors: ["A923", "D938", "B911"], note: "코발트 3 + 바이올렛 1 + 물 많이. 피콕은 접힌 모서리의 선명한 반사에만 사용." },
+      { title: "빵", scene: "식빵, 바게트, 과자", colors: ["A970", "C840", "A963"], note: "옐로 오커 3 + 옐로 오렌지 1. 구운 부분은 번트 시에나를 마른 붓 느낌으로 올린다." },
+      { title: "고기/햄", scene: "마트 식품, 소시지", colors: ["A959", "B957", "A807"], note: "라이트 레드 3 + 브라운 레드 1 + 로즈 극소량. 기름기 밝은 면은 물로만 연하게 남긴다." },
+      { title: "치즈/노란 포장", scene: "치즈, 노란 과자봉지", colors: ["A858", "A970", "C840"], note: "라이트 옐로 4 + 옐로 오커 1. 인쇄물처럼 선명해야 하면 옐로 오렌지를 더한다." },
+      { title: "빨간 과일", scene: "사과, 토마토", colors: ["A814", "A803", "B964"], note: "퍼머넌트 레드로 중간톤, 크림슨으로 어두운 붉은 면, 번트 엄버 소량으로 접지부." },
+      { title: "오렌지/감", scene: "귤, 감, 당근", colors: ["C840", "A858", "B833"], note: "옐로 오렌지 중심에 라이트 옐로로 밝은 면, 버밀리온으로 붉은 중간톤." },
+      { title: "할인 스티커", scene: "마트, 광고, 코믹 포인트", colors: ["A861", "B833", "A814"], note: "레몬 옐로를 밝게 두고 버밀리온을 아주 소량. 빨강 테두리는 퍼머넌트 레드로 선명하게." },
+      { title: "불 중심광", scene: "불꽃, 폭발, 마법 효과", colors: ["A861", "A858", "C840"], note: "중심은 레몬 옐로와 종이 흰색을 남긴다. 바깥쪽으로 라이트 옐로, 옐로 오렌지 순서." },
+      { title: "불 외곽/연기", scene: "폭발 외곽, 탄 흔적", colors: ["B833", "A814", "A933"], note: "버밀리온 2 + 퍼머넌트 레드 1. 가장 바깥 연기는 인디고를 물 많이 타서 분리한다." },
+      { title: "피/상처", scene: "공포, 액션, 상처 표현", colors: ["D811", "B957", "A977"], note: "로즈 매더 2 + 브라운 레드 1. 마른 피는 세피아를 더하고, 생피 하이라이트는 로즈를 남긴다." },
+      { title: "좀비 피부", scene: "좀비, 괴물, 병든 피부", colors: ["A888", "C879", "A923"], note: "비리디언 2 + 샙 그린 1 + 코발트 1. 물을 많이 쓰고, 눈 밑과 입가만 세피아로 눌러준다." },
+      { title: "썩은 피부", scene: "괴물 피부, 공포 코믹", colors: ["A970", "C879", "A977"], note: "옐로 오커 2 + 샙 그린 극소량 + 세피아 소량. 붉은 상처는 로즈 매더를 따로 얹는다." },
+      { title: "독 마법", scene: "독가스, 판타지 효과", colors: ["C879", "D938", "A861"], note: "샙 그린 2 + 바이올렛 1로 탁한 독기. 중심광은 레몬 옐로를 물 많이 써서 남긴다." },
+      { title: "물/얼음 마법", scene: "물결, 얼음, 차가운 이펙트", colors: ["A920", "B911", "A923"], note: "세룰리언 3 + 피콕 1. 얼음 그림자는 코발트를 물 많이 타고, 가장 밝은 선은 종이 흰색." },
+      { title: "어둠 마법", scene: "밤, 그림자 이펙트", colors: ["D938", "A933", "A928"], note: "바이올렛 2 + 인디고 2. 프러시안은 가장 깊은 중심부에 소량 넣어 무게를 준다." },
+      { title: "맑은 낮 그림자", scene: "야외 사물 그림자", colors: ["A923", "A959", "A970"], note: "코발트 3 + 라이트 레드 극소량. 노란 바닥 위 그림자는 옐로 오커를 조금 섞어 주변과 연결." },
+      { title: "노을 그림자", scene: "역광 인물, 저녁 거리", colors: ["D938", "A923", "A963"], note: "바이올렛 2 + 코발트 2. 따뜻한 반사광이 있으면 번트 시에나를 가장자리만 얇게." },
+      { title: "실내 형광등 그림자", scene: "마트, 병원, 편의점", colors: ["A933", "C879", "B911"], note: "인디고 3 + 샙 그린 극소량. 피콕은 차가운 반사면에만 넣어 형광등 느낌을 낸다." },
+      { title: "공포 장면 암부", scene: "밤, 좀비, 어두운 실내", colors: ["A933", "D938", "A977"], note: "인디고 3 + 바이올렛 1 + 세피아 1. 검정 대신 써야 깊고 분위기 있는 암부가 된다." },
+      { title: "자연스러운 검정 대용", scene: "접지 그림자, 가장 어두운 부분", colors: ["A928", "A963", "B975"], note: "프러시안 2 + 번트 시에나 1. 더 깊게 필요하면 반다이크를 마지막에 아주 소량." }
+    ];
+
+    const guides = [
+      {
+        id: "skin",
+        title: "피부와 인물",
+        scene: "얼굴, 손, 캐릭터 피부",
+        palette: ["A970", "A807", "A959", "B911", "A963", "B926"],
+        values: [
+          { label: "밝은 면", colors: [["A970", 2], ["A807", 1]], water: 16, note: "종이 흰색을 남기고 아주 얇게." },
+          { label: "중간톤", colors: [["A970", 4], ["A959", 1], ["A807", 1]], water: 8, note: "광대, 손등, 목 중간 면." },
+          { label: "그림자", colors: [["A959", 3], ["B911", 1]], water: 7, note: "턱, 코 밑, 손가락 사이." },
+          { label: "강한 암부", colors: [["A963", 2], ["B926", 1]], water: 4, note: "역광, 머리카락 아래." }
+        ],
+        steps: [
+          "밝은 피부색을 물 많이 타서 넓게 깔고 하이라이트는 남긴다.",
+          "마른 뒤 라이트 레드와 옐로 오커로 중간톤을 잡는다.",
+          "턱, 코 밑, 손가락 사이에 피콕 블루 소량을 섞은 그림자를 넣는다.",
+          "볼, 귀, 손끝은 퍼머넌트 로즈를 맑게 겹쳐 혈색만 올린다."
+        ],
+        warning: "피부 암부에 인디고나 세피아를 바로 넣으면 죽은 회색 피부가 되기 쉽습니다. 먼저 라이트 레드 계열로 온기를 만든 뒤 차가운 색을 극소량만 섞으세요."
+      },
+      {
+        id: "sky",
+        title: "하늘과 구름",
+        scene: "낮 하늘, 원경, 흰 구름",
+        palette: ["A920", "A923", "B911", "A807", "D938", "A959"],
+        values: [
+          { label: "맑은 하늘", colors: [["A920", 4]], water: 18, note: "넓고 균일한 워시." },
+          { label: "깊은 하늘", colors: [["A923", 3], ["A920", 2]], water: 12, note: "화면 위쪽, 원근감." },
+          { label: "원경 공기", colors: [["A920", 3], ["A807", 1]], water: 18, note: "멀리 있는 건물과 산." },
+          { label: "구름 그림자", colors: [["A923", 3], ["A959", 1], ["D938", 1]], water: 15, note: "흰 구름 하단." }
+        ],
+        steps: [
+          "하늘은 종이를 충분히 적신 뒤 밝은 세룰리언 워시부터 깐다.",
+          "위쪽이나 먼 배경에 코발트를 더해 깊이를 만든다.",
+          "구름은 흰 종이를 남기고, 하단만 회보라 그림자로 잡는다.",
+          "마지막에 피콕 블루는 선명한 반사광이나 작은 포인트에만 쓴다."
+        ],
+        warning: "하늘에 여러 색을 젖은 상태로 과하게 문지르면 얼룩과 탁함이 생깁니다. 큰 워시 후 말리고, 구름 그림자는 두 번째 레이어로 넣는 편이 안정적입니다."
+      },
+      {
+        id: "sunset",
+        title: "노을과 역광",
+        scene: "석양, 감성 배경, 역광 인물",
+        palette: ["A858", "C840", "B833", "B821", "D938", "A923"],
+        values: [
+          { label: "중심광", colors: [["A858", 4]], water: 14, note: "해 주변, 가장 밝은 띠." },
+          { label: "주황 하늘", colors: [["C840", 3], ["B833", 1]], water: 10, note: "노을의 주조색." },
+          { label: "붉은 구름", colors: [["B833", 2], ["A814", 1]], water: 8, note: "구름 하단 포인트." },
+          { label: "보라 그림자", colors: [["D938", 3], ["A923", 2], ["B821", 1]], water: 9, note: "역광 암부." }
+        ],
+        steps: [
+          "노랑에서 주황으로 큰 그라데이션을 먼저 만든다.",
+          "붉은색은 화면 전체가 아니라 구름 하단과 주제부 반사광에만 둔다.",
+          "주황 레이어가 마른 뒤 보라 그림자로 역광 구조를 잡는다.",
+          "주제부 실루엣은 인디고나 세피아가 아니라 보라와 코발트로 먼저 잡는다."
+        ],
+        warning: "노랑, 주황, 보라를 젖은 상태에서 계속 섞으면 탁한 갈색이 됩니다. 노을색과 그림자색은 되도록 말린 뒤 겹치세요."
+      },
+      {
+        id: "nature",
+        title: "나무와 풀",
+        scene: "잎, 숲, 풀밭, 자연물 배경",
+        palette: ["C879", "A970", "B883", "A933", "B870", "B964"],
+        values: [
+          { label: "새순", colors: [["A861", 3], ["C874", 1]], water: 10, note: "밝은 포인트." },
+          { label: "잎 중간톤", colors: [["C879", 3], ["A970", 1]], water: 8, note: "가장 많이 쓰는 초록." },
+          { label: "잎 암부", colors: [["B883", 3], ["A933", 1]], water: 5, note: "겹친 잎, 안쪽 숲." },
+          { label: "마른 풀", colors: [["D868", 2], ["A970", 2], ["B964", 1]], water: 8, note: "가을, 오래된 자연물." }
+        ],
+        steps: [
+          "샙 그린과 옐로 오커로 자연물의 기본 중간톤을 먼저 잡는다.",
+          "빛 받는 잎은 레몬 옐로를 섞어 작게 남긴다.",
+          "암부는 후커스 그린에 인디고를 소량 섞어 깊이를 준다.",
+          "배경 풀은 물을 많이 써서 채도를 낮추고, 주제부 가까운 잎만 선명하게 둔다."
+        ],
+        warning: "퍼머넌트 그린 1을 단독으로 넓게 쓰면 플라스틱처럼 보입니다. 자연물에는 옐로 오커, 번트 엄버, 세피아로 한 번 눌러 쓰세요."
+      },
+      {
+        id: "metal",
+        title: "금속과 도시",
+        scene: "캔, 기계, 콘크리트, 실내 배경",
+        palette: ["A933", "A977", "A923", "A928", "A963", "B975"],
+        values: [
+          { label: "밝은 반사", colors: [["A923", 2]], water: 18, note: "흰 면 주변 차가운 반사." },
+          { label: "기본 회색", colors: [["A933", 2], ["A977", 1]], water: 13, note: "금속 중간톤." },
+          { label: "푸른 암부", colors: [["A928", 2], ["A933", 2]], water: 7, note: "차가운 깊은 반사." },
+          { label: "녹슨 면", colors: [["A963", 3], ["B966", 1], ["A977", 1]], water: 8, note: "오래된 철, 오염." }
+        ],
+        steps: [
+          "금속은 먼저 흰 하이라이트 형태를 남기고 주변 회색만 얇게 깐다.",
+          "인디고와 세피아로 중간 회색을 만들고 물 농도로 면을 나눈다.",
+          "가장 어두운 반사는 프러시안과 인디고로 날카롭게 잡는다.",
+          "주변 물체 색을 아주 소량 반사색으로 넣어 금속감을 살린다."
+        ],
+        warning: "금속을 단순 회색으로만 칠하면 평평해집니다. 하이라이트, 반사색, 가장 어두운 선의 명도 차이를 크게 두세요."
+      },
+      {
+        id: "glass",
+        title: "유리와 비닐",
+        scene: "유리병, 컵, 투명 포장지",
+        palette: ["A888", "B911", "A928", "A923", "D938", "A920"],
+        values: [
+          { label: "맑은 면", colors: [["A920", 3], ["B911", 1]], water: 18, note: "투명한 밝은 면." },
+          { label: "청록 유리", colors: [["A888", 2], ["B911", 1]], water: 10, note: "유리병 중간톤." },
+          { label: "두꺼운 테두리", colors: [["A888", 2], ["A928", 1]], water: 5, note: "입구, 바닥, 겹침." },
+          { label: "비닐 그림자", colors: [["A923", 3], ["D938", 1]], water: 15, note: "접힌 투명 포장." }
+        ],
+        steps: [
+          "투명 물체는 하이라이트를 크게 남기고 밝은 워시로 형태만 잡는다.",
+          "유리 두께가 보이는 입구, 바닥, 겹친 부분만 진하게 칠한다.",
+          "배경색을 아주 옅게 반사시키면 투명감이 살아난다.",
+          "마른 뒤 가장자리 선과 작은 흰 틈을 정리한다."
+        ],
+        warning: "유리 전체를 같은 농도로 칠하면 플라스틱처럼 보입니다. 진한 색은 두꺼운 부분과 겹친 부분에만 제한하세요."
+      },
+      {
+        id: "food",
+        title: "음식과 마트 소품",
+        scene: "빵, 과일, 포장지, 할인 스티커",
+        palette: ["A970", "C840", "A963", "A814", "A803", "A861"],
+        values: [
+          { label: "빵 밝은 면", colors: [["A970", 3], ["A858", 1]], water: 10, note: "부드러운 기본색." },
+          { label: "구운 부분", colors: [["C840", 2], ["A963", 2]], water: 6, note: "가장자리, 표면." },
+          { label: "빨간 과일", colors: [["A814", 3], ["A803", 1]], water: 7, note: "사과, 토마토." },
+          { label: "스티커 포인트", colors: [["A861", 3], ["B833", 1]], water: 5, note: "강한 시선 집중." }
+        ],
+        steps: [
+          "음식은 밝은 기본색을 먼저 넓게 깔고 가장 밝은 촉촉한 면은 남긴다.",
+          "구운 부분, 과일 암부, 포장지 접힘을 두 번째 레이어로 잡는다.",
+          "마트 장면은 주조색 1개, 보조색 1개, 강조색 1개로 제한한다.",
+          "스티커와 포장지 강조색은 작은 면적에 강하게 사용한다."
+        ],
+        warning: "선명한 빨강, 노랑, 파랑 포장지를 모두 같은 채도로 칠하면 화면이 산만해집니다. 주제부만 선명하게, 배경 상품은 물을 많이 타세요."
+      },
+      {
+        id: "fire",
+        title: "불과 폭발",
+        scene: "불꽃, 폭발, 강한 조명 효과",
+        palette: ["A861", "A858", "C840", "B833", "A814", "A933"],
+        values: [
+          { label: "중심광", colors: [["A861", 3]], water: 8, note: "흰 종이와 가장 가까운 부분." },
+          { label: "밝은 불", colors: [["A858", 3], ["C840", 1]], water: 7, note: "중심 주변." },
+          { label: "주황 불", colors: [["C840", 2], ["B833", 2]], water: 5, note: "불꽃 외곽." },
+          { label: "연기 암부", colors: [["A933", 2], ["A977", 1]], water: 12, note: "바깥 연기와 탄 부분." }
+        ],
+        steps: [
+          "가장 밝은 중심은 칠하지 않거나 레몬 옐로를 아주 얇게 둔다.",
+          "노랑에서 주황, 빨강 순서로 바깥으로 확장한다.",
+          "불 주변 물체에는 버밀리온이나 옐로 오렌지 반사광을 얇게 넣는다.",
+          "연기는 인디고와 세피아를 물 많이 타서 불과 분리한다."
+        ],
+        warning: "불 중심을 빨강으로 칠하면 빛이 죽습니다. 중심은 노랑과 흰 종이, 외곽이 주황과 빨강이라는 순서를 지키세요."
+      },
+      {
+        id: "horror",
+        title: "좀비와 공포",
+        scene: "좀비 피부, 피, 어두운 마트",
+        palette: ["A888", "C879", "A923", "D811", "B957", "A977"],
+        values: [
+          { label: "창백한 피부", colors: [["A888", 1], ["A923", 2]], water: 18, note: "넓은 피부 밑색." },
+          { label: "썩은 피부", colors: [["A970", 2], ["C879", 1], ["A977", 1]], water: 11, note: "광대, 손, 목." },
+          { label: "피/상처", colors: [["D811", 2], ["B957", 1], ["A977", 1]], water: 5, note: "상처, 얼룩." },
+          { label: "공포 암부", colors: [["A933", 3], ["D938", 1], ["A977", 1]], water: 6, note: "배경 깊은 곳." }
+        ],
+        steps: [
+          "좀비 피부는 청록 밑색을 물 많이 타서 창백하게 시작한다.",
+          "썩은 부위는 옐로 오커와 샙 그린, 세피아를 부분적으로 얹는다.",
+          "피는 로즈 매더 계열을 따로 얹고 세피아로 마른 얼룩을 만든다.",
+          "배경 암부는 인디고, 바이올렛, 세피아로 검정 없이 깊게 잡는다."
+        ],
+        warning: "피와 초록 피부를 젖은 상태에서 섞으면 지저분한 갈색이 됩니다. 피부를 먼저 말린 뒤 상처색을 올리세요."
+      },
+      {
+        id: "shadow",
+        title: "장면별 그림자",
+        scene: "낮, 실내, 노을, 공포 장면",
+        palette: ["A923", "A959", "D938", "A933", "C879", "A977"],
+        values: [
+          { label: "맑은 낮", colors: [["A923", 3], ["A959", 1]], water: 12, note: "야외 일반 그림자." },
+          { label: "노을", colors: [["D938", 2], ["A923", 2]], water: 10, note: "역광 그림자." },
+          { label: "형광등", colors: [["A933", 3], ["C879", 1]], water: 12, note: "마트, 병원." },
+          { label: "공포", colors: [["A933", 3], ["D938", 1], ["A977", 1]], water: 6, note: "밤, 어두운 실내." }
+        ],
+        steps: [
+          "먼저 장면의 조명 온도를 정한다.",
+          "그림자는 어둡게만 만들지 말고 조명 반대 온도로 잡는다.",
+          "접지부와 겹침부만 농도를 높여 가장 어두운 곳을 만든다.",
+          "배경 그림자는 주제부보다 채도를 낮춰 공간감을 만든다."
+        ],
+        warning: "모든 그림자를 같은 회색으로 칠하면 장면 분위기가 사라집니다. 낮은 코발트, 노을은 바이올렛, 실내 형광등은 인디고+녹색기로 구분하세요."
+      }
+    ];
+
+    guides.push(
+      {
+        id: "skinPresetBase",
+        title: "피부색 기본 프리셋",
+        scene: "밝은 얼굴, 손, 기본 살색 조합",
+        palette: ["A970", "A807", "A959"],
+        values: [
+          { label: "하이라이트", colors: [["A970", 3], ["A807", 1]], water: 18, note: "밝은 면은 종이를 많이 남긴다." },
+          { label: "밝은 명부", colors: [["A970", 5], ["A807", 1]], water: 14, note: "옐로 오커 중심의 맑은 피부." },
+          { label: "중간면", colors: [["A970", 5], ["A807", 2], ["A959", 1]], water: 10, note: "얼굴과 손의 기본 중간톤." },
+          { label: "작은 홍조", colors: [["A807", 2], ["A959", 1]], water: 12, note: "볼, 귀, 손끝." }
+        ],
+        steps: ["옐로 오커와 로즈를 물 많이 타서 넓게 깐다.", "라이트 레드는 중간면과 혈색에만 소량 쓴다.", "하이라이트는 흰 종이를 남긴다.", "암부는 별도 피부 어둠 가이드를 참고한다."],
+        warning: "기본 피부 조합은 밝은 영역용입니다. 암부까지 같은 색을 진하게 쓰면 탁한 주황 피부가 됩니다."
+      },
+      {
+        id: "skinPresetDark",
+        title: "피부색 어둠 프리셋",
+        scene: "턱 밑, 손가락 사이, 피부 암부",
+        palette: ["A970", "A959", "A963", "B911", "A977"],
+        values: [
+          { label: "연한 암부", colors: [["A959", 2], ["A970", 1]], water: 14, note: "부드러운 면 전환." },
+          { label: "일반 암부", colors: [["A959", 3], ["B911", 1]], water: 10, note: "피부 그림자의 기본." },
+          { label: "강한 암부", colors: [["A963", 2], ["B911", 1], ["A959", 1]], water: 7, note: "턱 밑, 머리 아래." },
+          { label: "깊은 틈", colors: [["A963", 2], ["A977", 1]], water: 5, note: "아주 좁은 접점." }
+        ],
+        steps: ["밝은 피부가 마른 뒤 암부를 올린다.", "라이트 레드로 온기를 유지한다.", "피콕 블루는 소량으로만 온도를 식힌다.", "세피아는 가장 깊은 틈에만 쓴다."],
+        warning: "피부 어둠에 검정이나 뉴트럴 틴트를 바로 쓰면 생기가 사라집니다."
+      },
+      {
+        id: "backlightPreset",
+        title: "역광 보색 프리셋",
+        scene: "노을, 역광, 차가운 그림자 흐름",
+        palette: ["A923", "B926", "D938", "A807", "A977"],
+        values: [
+          { label: "밝은 반사", colors: [["A923", 2], ["A807", 1]], water: 16, note: "가장자리 반사광." },
+          { label: "보색 그림자", colors: [["A923", 3], ["B926", 2]], water: 10, note: "주된 역광 암부." },
+          { label: "보라 흐름", colors: [["D938", 2], ["A923", 2]], water: 9, note: "노을과 어울리는 그림자." },
+          { label: "깊은 역광", colors: [["B926", 2], ["A977", 1]], water: 6, note: "실루엣 가까운 어둠." }
+        ],
+        steps: ["광원색을 먼저 정한다.", "그 반대 온도의 코발트/울트라마린/바이올렛으로 그림자를 잡는다.", "가장자리에는 로즈나 노을색 반사광을 얇게 둔다.", "깊은 부분만 세피아를 소량 섞는다."],
+        warning: "역광 그림자를 단순 검정으로 만들면 빛이 죽습니다. 보색 계열로 온도 차이를 먼저 만드세요."
+      },
+      {
+        id: "distancePreset",
+        title: "배경 원경 프리셋",
+        scene: "먼 배경, 공기 원근, 낮은 채도",
+        palette: ["A923", "A920", "A807", "A970", "A977"],
+        values: [
+          { label: "먼 하늘", colors: [["A920", 2], ["A923", 1]], water: 20, note: "거의 흰색에 가까운 원경." },
+          { label: "먼 건물", colors: [["A923", 2], ["A807", 1]], water: 18, note: "살짝 보라기 있는 회색." },
+          { label: "먼 자연물", colors: [["A923", 2], ["A970", 1]], water: 18, note: "노란기 낮춘 자연물." },
+          { label: "원경 암부", colors: [["A923", 2], ["A977", 1]], water: 15, note: "명도만 낮춘 먼 그림자." }
+        ],
+        steps: ["원경은 채도보다 명도와 물 농도를 먼저 낮춘다.", "선명한 색은 주제부에 남긴다.", "코발트와 로즈로 공기색을 만든다.", "디테일은 생략하고 큰 덩어리만 둔다."],
+        warning: "원경에 진한 녹색이나 빨강을 쓰면 앞으로 튀어나옵니다."
+      },
+      {
+        id: "hair",
+        title: "머리카락",
+        scene: "검은 머리, 갈색 머리, 금발",
+        palette: ["A977", "A933", "A963", "A970", "A858", "B975"],
+        values: [
+          { label: "검은 머리 빛", colors: [["A933", 1], ["A923", 1]], water: 14, note: "검은 머리의 차가운 하이라이트." },
+          { label: "검은 머리 중간", colors: [["A977", 2], ["A933", 1]], water: 8, note: "전체 큰 덩어리." },
+          { label: "갈색 머리", colors: [["A963", 2], ["A977", 1]], water: 8, note: "따뜻한 머리카락." },
+          { label: "금발", colors: [["A970", 3], ["A858", 1]], water: 12, note: "밝은 머리카락." }
+        ],
+        steps: ["밝은 결 방향을 남기고 큰 덩어리부터 칠한다.", "중간톤으로 머리 형태를 잡는다.", "마른 뒤 가장 어두운 결을 세피아나 반다이크로 넣는다.", "하이라이트는 흰 종이를 남기거나 물로 들어낸다."],
+        warning: "머리카락을 선으로만 그리면 산만합니다. 큰 덩어리 명도 후 결을 얹으세요."
+      },
+      {
+        id: "whiteObject",
+        title: "흰 물체",
+        scene: "석고, 흰 컵, 흰 천, 종이",
+        palette: ["A923", "D938", "A970", "A959", "A920", "A977"],
+        values: [
+          { label: "하이라이트", colors: [["A920", 1]], water: 20, note: "거의 칠하지 않는 면." },
+          { label: "밝은 그림자", colors: [["A923", 2], ["A970", 1]], water: 16, note: "면 전환부." },
+          { label: "중간 그림자", colors: [["A923", 3], ["D938", 1]], water: 12, note: "차가운 암부." },
+          { label: "접지 그림자", colors: [["A977", 2], ["A923", 1]], water: 8, note: "바닥과 닿는 곳." }
+        ],
+        steps: ["흰 영역은 종이색을 최대한 남긴다.", "코발트와 바이올렛으로 면 전환을 얇게 잡는다.", "주변 반사색을 아주 조금 넣는다.", "접지부만 명도를 확실히 낮춘다."],
+        warning: "흰 물체는 흰색 물감보다 남기는 종이와 주변 그림자색으로 만듭니다."
+      },
+      {
+        id: "cloth",
+        title: "천과 옷 주름",
+        scene: "셔츠, 커튼, 천 주름",
+        palette: ["A923", "D938", "A933", "A814", "A970", "A977"],
+        values: [
+          { label: "밝은 주름", colors: [["A923", 1]], water: 18, note: "천의 밝은 면." },
+          { label: "중간 주름", colors: [["A923", 2], ["D938", 1]], water: 10, note: "접히는 면." },
+          { label: "깊은 주름", colors: [["A933", 2], ["D938", 1]], water: 6, note: "주름 안쪽." },
+          { label: "따뜻한 반사", colors: [["A970", 2], ["A814", 1]], water: 12, note: "주변 색 반사." }
+        ],
+        steps: ["천의 큰 흐름을 먼저 잡는다.", "주름의 밝은 능선은 남긴다.", "접힌 안쪽만 농도를 높인다.", "마른 뒤 얇은 선으로 주름 끝을 정리한다."],
+        warning: "주름마다 같은 진한 선을 넣으면 천이 딱딱해집니다. 명도 차이를 단계적으로 주세요."
+      },
+      {
+        id: "water",
+        title: "물과 반사",
+        scene: "물컵, 웅덩이, 바다, 반사광",
+        palette: ["A920", "B911", "A888", "A928", "A933", "D938"],
+        values: [
+          { label: "밝은 물", colors: [["A920", 3], ["B911", 1]], water: 18, note: "얕은 물." },
+          { label: "청록 반사", colors: [["A888", 2], ["B911", 1]], water: 12, note: "물의 색감." },
+          { label: "깊은 물", colors: [["A928", 2], ["A933", 1]], water: 8, note: "깊은 곳." },
+          { label: "보라 반사", colors: [["D938", 1], ["A923", 2]], water: 14, note: "그림자 반사." }
+        ],
+        steps: ["밝은 반짝임은 남긴다.", "큰 물색을 옅게 깐다.", "깊은 곳과 반사되는 어두운 형태를 넣는다.", "수평 방향 터치로 물결감을 정리한다."],
+        warning: "물을 파란색으로만 칠하지 말고 주변 색이 비친다는 전제로 반사색을 섞으세요."
+      },
+      {
+        id: "smoke",
+        title: "연기와 먼지",
+        scene: "폭발 연기, 먼지, 안개",
+        palette: ["A933", "A977", "A923", "A970", "B964", "D938"],
+        values: [
+          { label: "옅은 안개", colors: [["A923", 1], ["A970", 1]], water: 20, note: "먼 배경." },
+          { label: "회색 연기", colors: [["A933", 1], ["A977", 1]], water: 16, note: "부드러운 연기." },
+          { label: "먼지", colors: [["A970", 2], ["B964", 1]], water: 14, note: "흙먼지." },
+          { label: "검은 연기", colors: [["A933", 3], ["A977", 1], ["D938", 1]], water: 8, note: "폭발 중심." }
+        ],
+        steps: ["연기는 외곽을 부드럽게 남긴다.", "밝은 워시로 덩어리를 잡는다.", "중심부만 어둡게 겹친다.", "마른 붓이나 물 번짐으로 가장자리를 흐린다."],
+        warning: "연기 외곽을 선으로 닫으면 구름처럼 딱딱해집니다. 가장자리는 열어두세요."
+      },
+      {
+        id: "neon",
+        title: "네온과 간판",
+        scene: "상점 간판, 게임 이펙트, 도시 야경",
+        palette: ["B821", "B911", "A861", "D938", "A933", "A814"],
+        values: [
+          { label: "분홍 네온", colors: [["B821", 3], ["D938", 1]], water: 8, note: "핵심 빛." },
+          { label: "파랑 네온", colors: [["B911", 3], ["A920", 1]], water: 8, note: "차가운 빛." },
+          { label: "노랑 네온", colors: [["A861", 3], ["B833", 1]], water: 8, note: "강조 조명." },
+          { label: "밤 배경", colors: [["A933", 3], ["D938", 1]], water: 8, note: "네온 주변 암부." }
+        ],
+        steps: ["배경을 먼저 어둡게 잡는다.", "네온 중심은 선명한 색을 작게 둔다.", "같은 색을 물 많이 타서 주변에 번진 빛으로 깐다.", "가장 밝은 중심은 종이 흰색과 대비시킨다."],
+        warning: "네온색은 넓게 쓰면 힘이 빠집니다. 중심은 좁고 강하게, 주변은 물로 번지게 처리하세요."
+      },
+      {
+        id: "tintSpecial",
+        title: "틴트 12색 특색 활용",
+        scene: "파스텔 피부, 고명도 배경, 디자인 소품",
+        category: "특색",
+        tintOnly: true,
+        palette: ["A825", "A863", "A892", "A913", "B936", "B986"],
+        values: [
+          { label: "파스텔 피부", colors: [["A825", 2], ["A970", 1]], water: 10, note: "밝은 피부 보정. 틴트 토글을 켜고 사용." },
+          { label: "부드러운 빛", colors: [["A863", 2], ["A866", 1]], water: 10, note: "조명, 빵, 따뜻한 반사." },
+          { label: "민트 배경", colors: [["A892", 2], ["A913", 1]], water: 12, note: "밝은 디자인 배경." },
+          { label: "회보라 그림자", colors: [["B936", 2], ["A944", 1]], water: 10, note: "석고, 흰 천, 감성 그림자." }
+        ],
+        steps: ["팔레트 왼쪽의 특색 틴트 12색 사용 토글을 켠다.", "틴트는 기본색을 대체하기보다 밝은 보정색으로 쓴다.", "넓은 면에는 물을 충분히 써서 분필 느낌을 줄인다.", "가장 깊은 암부는 뉴트럴 틴트나 기존 32색 암색을 소량 사용한다."],
+        warning: "틴트 12색은 PW6 등 흰색 안료가 포함된 고명도 특색입니다. 투명 수채화처럼 여러 번 섞으면 탁해질 수 있어 마지막 보정과 밝은 효과에 적합합니다."
+      },
+      {
+        id: "tintSkinWarm",
+        title: "틴트 살구 피부톤",
+        scene: "쟌 브릴리언트 + 셸 핑크를 쓰는 밝은 피부",
+        category: "인물",
+        tintOnly: true,
+        palette: ["A866", "A825", "A970", "A807", "A959"],
+        values: [
+          { label: "밝은 살구빛", colors: [["A866", 2], ["A825", 2]], water: 12, note: "볼륨의 밝은 명부. 흰기 있는 고명도 피부." },
+          { label: "기본 피부", colors: [["A825", 2], ["A970", 1], ["A807", 1]], water: 10, note: "얼굴과 손의 부드러운 중간톤." },
+          { label: "혈색 보정", colors: [["B823", 1], ["A807", 1]], water: 14, note: "볼, 귀, 손끝에 얇게." },
+          { label: "피부 어둠", colors: [["A959", 2], ["A923", 1]], water: 9, note: "틴트 피부가 뜨지 않게 차갑게 눌러준다." }
+        ],
+        steps: ["셸 핑크와 쟌 브릴리언트를 물 있게 깔아 밝은 피부 덩어리를 만든다.", "옐로 오커와 퍼머넌트 로즈로 피부색을 현실적으로 연결한다.", "브릴리언트 핑크는 홍조 포인트에만 얇게 쓴다.", "암부는 틴트로 진하게 만들지 말고 라이트 레드와 코발트로 따로 잡는다."],
+        warning: "쟌 브릴리언트와 셸 핑크는 밝은 피부를 빠르게 만들지만 흰기가 있어 두껍게 반복하면 분필처럼 뜹니다."
+      },
+      {
+        id: "tintPaleSkin",
+        title: "창백한 틴트 피부",
+        scene: "쉘 핑크 + 라벤더를 쓰는 차가운 피부",
+        category: "인물",
+        tintOnly: true,
+        palette: ["A825", "B936", "A915", "A807", "A923"],
+        values: [
+          { label: "창백한 밝은 면", colors: [["A825", 2], ["B936", 1]], water: 16, note: "병약함, 실내 형광등 피부." },
+          { label: "차가운 중간면", colors: [["A825", 1], ["A915", 1]], water: 14, note: "혈색을 낮춘 면." },
+          { label: "얇은 홍조", colors: [["B823", 1], ["A807", 1]], water: 18, note: "생기를 아주 조금만 회복." },
+          { label: "푸른 그림자", colors: [["B936", 2], ["A923", 1]], water: 12, note: "눈 밑, 턱 아래." }
+        ],
+        steps: ["쉘 핑크를 아주 얇게 깔고 라벤더로 차가운 면을 만든다.", "홍조는 작은 면적에만 넣는다.", "코발트로 그림자를 연결해 피부가 분리되지 않게 한다.", "입술과 손끝은 기존 로즈 계열로 생기를 보정한다."],
+        warning: "창백한 피부는 틴트만 쓰면 플랫해집니다. 아주 작은 로즈 계열 포인트가 필요합니다."
+      },
+      {
+        id: "tintBackgroundAir",
+        title: "틴트 원경 공기",
+        scene: "블루 그레이 + 라벤더를 쓰는 먼 배경",
+        category: "배경",
+        tintOnly: true,
+        palette: ["A915", "B936", "A892", "A923", "A977"],
+        values: [
+          { label: "먼 하늘", colors: [["A915", 2], ["B936", 1]], water: 18, note: "흰기 있는 차가운 원경." },
+          { label: "먼 건물", colors: [["A915", 2], ["A977", 1]], water: 16, note: "채도 낮은 회청색 건물." },
+          { label: "먼 녹지", colors: [["A892", 2], ["A915", 1]], water: 18, note: "앞으로 튀지 않는 연녹색." },
+          { label: "원경 암부", colors: [["A923", 2], ["B936", 1]], water: 14, note: "밝은 배경의 낮은 명도." }
+        ],
+        steps: ["블루 그레이와 라벤더로 먼저 공기색을 얇게 깐다.", "원경의 자연물은 그린 페일을 섞어 채도를 낮춘다.", "디테일은 생략하고 큰 면만 둔다.", "주제부와 대비되도록 원경은 끝까지 물을 많이 유지한다."],
+        warning: "틴트 원경은 밝고 부드럽지만, 가까운 물체에 쓰면 거리감이 무너질 수 있습니다."
+      },
+      {
+        id: "tintWhiteShadow",
+        title: "흰 물체 틴트 그림자",
+        scene: "라벤더 + 블루 그레이로 석고/흰 천 그림자",
+        category: "사물",
+        tintOnly: true,
+        palette: ["B936", "A915", "A825", "A923", "A970"],
+        values: [
+          { label: "밝은 반사", colors: [["A825", 1], ["A915", 1]], water: 18, note: "흰 천의 따뜻한 반사." },
+          { label: "기본 회보라", colors: [["B936", 2], ["A915", 1]], water: 14, note: "석고, 흰 컵의 부드러운 그림자." },
+          { label: "면 전환", colors: [["B936", 2], ["A923", 1]], water: 12, note: "조금 더 차가운 면." },
+          { label: "접지 그림자", colors: [["A923", 2], ["A977", 1]], water: 9, note: "가장 어두운 닿는 부분은 기존색으로." }
+        ],
+        steps: ["흰 물체는 흰 종이를 남기고 라벤더를 얇게 깐다.", "블루 그레이로 차가운 면 전환을 만든다.", "따뜻한 반사는 쉘 핑크를 아주 적게 쓴다.", "접지부는 틴트 대신 세피아/코발트로 무게를 준다."],
+        warning: "라벤더는 흰 물체 그림자를 쉽게 만들지만, 전부 라벤더로 칠하면 장난감처럼 보일 수 있습니다."
+      },
+      {
+        id: "tintPastelGoods",
+        title: "파스텔 소품",
+        scene: "민트, 라일락, 파스텔 포장지",
+        category: "사물",
+        tintOnly: true,
+        palette: ["A892", "A913", "A944", "B823", "A863", "B986"],
+        values: [
+          { label: "민트 소품", colors: [["A892", 2], ["A913", 1]], water: 10, note: "문구류, 장난감, 패키지." },
+          { label: "라일락 소품", colors: [["A944", 2], ["B936", 1]], water: 10, note: "보라 계열 파스텔 물체." },
+          { label: "핑크 포인트", colors: [["B823", 2], ["A825", 1]], water: 9, note: "귀여운 강조색." },
+          { label: "중성 암부", colors: [["B986", 1], ["A915", 1]], water: 12, note: "파스텔을 죽이지 않는 어둠." }
+        ],
+        steps: ["파스텔 소품은 틴트색을 기본색으로 깔아도 좋다.", "암부는 같은 색을 진하게 쓰기보다 뉴트럴 틴트와 블루 그레이로 낮춘다.", "하이라이트는 종이 흰색을 남긴다.", "주변 배경은 채도를 낮춰 소품이 뜨게 한다."],
+        warning: "파스텔 소품은 색이 예쁘지만 명도 차이가 약해지기 쉽습니다. 가장 어두운 접지부를 꼭 분리하세요."
+      },
+      {
+        id: "tintSoftEffect",
+        title: "소프트 마법광",
+        scene: "브릴리언트 핑크 + 호라이즌 블루 이펙트",
+        category: "효과",
+        tintOnly: true,
+        palette: ["B823", "A913", "A944", "A861", "D938", "B986"],
+        values: [
+          { label: "핑크 광원", colors: [["B823", 2], ["A944", 1]], water: 8, note: "부드러운 분홍 마법광." },
+          { label: "청록 광원", colors: [["A913", 2], ["A892", 1]], water: 8, note: "물, 회복, 보호막 이펙트." },
+          { label: "중심 밝기", colors: [["A861", 2], ["A825", 1]], water: 10, note: "빛 중심부." },
+          { label: "주변 암부", colors: [["D938", 2], ["B986", 1]], water: 8, note: "빛을 살리는 어두운 배경." }
+        ],
+        steps: ["배경을 먼저 어둡게 잡는다.", "틴트 색으로 빛의 중심을 작게 만든다.", "같은 색을 물 많이 타서 주변으로 번지게 한다.", "뉴트럴 틴트는 빛 주변 암부에만 소량 쓴다."],
+        warning: "틴트 이펙트는 밝아서 넓게 쓰면 힘이 빠집니다. 중심은 작게, 주변광은 얇게 처리하세요."
+      }
+    );
+
+    const paletteEl = document.querySelector("#palette");
+    const detailEl = document.querySelector("#paintDetail");
+    const searchEl = document.querySelector("#search");
+    const modeToggle = document.querySelector("#modeToggle");
+    const tabs = document.querySelectorAll(".tab");
+    const views = document.querySelectorAll(".view");
+    const comboList = document.querySelector("#comboList");
+    const guideSearch = document.querySelector("#guideSearch");
+    const guideCategories = document.querySelector("#guideCategories");
+    const guideChipList = document.querySelector("#guideChipList");
+    const guideResult = document.querySelector("#guideResult");
+    const sliderMixer = document.querySelector("#sliderMixer");
+    const addSelectedPaint = document.querySelector("#addSelectedPaint");
+    const clearMixPaints = document.querySelector("#clearMixPaints");
+    const simResultChip = document.querySelector("#simResultChip");
+    const simResultCode = document.querySelector("#simResultCode");
+    const simMixMeta = document.querySelector("#simMixMeta");
+    const valueScale = document.querySelector("#valueScale");
+    const complementChip = document.querySelector("#complementChip");
+    const complementCode = document.querySelector("#complementCode");
+    const complementText = document.querySelector("#complementText");
+    const realismNote = document.querySelector("#realismNote");
+    const tintToggle = document.querySelector("#tintToggle");
+    const imageInput = document.querySelector("#imageInput");
+    const canvas = document.querySelector("#imageCanvas");
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const pickedColor = document.querySelector("#pickedColor");
+    const matchesEl = document.querySelector("#matches");
+    let selected = paints[0].code;
+    let selectedGuide = guides[0].id;
+    let selectedGuideCategory = "전체";
+    let guideQuery = "";
+    let mixPaintCodes = ["A970", "A807", "A959"];
+    let mixPaintValues = { A970: 54, A807: 18, A959: 10 };
+    let mixWater = 46;
+    let tintEnabled = false;
+    let detailCollapsed = false;
+    let imageReady = false;
+
+    function setMode(mode) {
+      const dark = mode === "dark";
+      document.body.classList.toggle("dark", dark);
+      modeToggle.textContent = dark ? "라이트" : "다크";
+      try {
+        localStorage.setItem("watercolor-mode", mode);
+      } catch (error) {
+        // iOS local file previews can block storage; the app should still run.
+      }
+    }
+
+    function savedMode() {
+      try {
+        return localStorage.getItem("watercolor-mode") || "light";
+      } catch (error) {
+        return "light";
+      }
+    }
+
+    const rgb = (hex) => {
+      const value = hex.replace("#", "");
+      return [0, 2, 4].map((i) => parseInt(value.slice(i, i + 2), 16));
+    };
+
+    const hexFromRgb = ([r, g, b]) => "#" + [r, g, b].map((v) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, "0")).join("");
+    const allPaints = () => tintEnabled ? [...paints, ...tintPaints] : paints;
+    const byCode = (code) => [...paints, ...tintPaints].find((paint) => paint.code === code);
+
+    function blendColors(parts) {
+      const total = parts.reduce((sum, part) => sum + part.weight, 0) || 1;
+      const mixed = parts.reduce((acc, part) => {
+        const color = rgb(part.hex);
+        return acc.map((value, index) => value + color[index] * part.weight / total);
+      }, [0, 0, 0]);
+      return hexFromRgb(mixed);
+    }
+
+    function channelSpread(color) {
+      return Math.max(...color) - Math.min(...color);
+    }
+
+    function mixColors(parts) {
+      const total = parts.reduce((sum, part) => sum + part.weight, 0) || 1;
+      const absorbent = parts.reduce((acc, part) => {
+        const color = rgb(part.hex);
+        return acc.map((value, index) => value + Math.log(Math.max(color[index], 6) / 255) * part.weight / total);
+      }, [0, 0, 0]).map((value) => 255 * Math.exp(value));
+      const weightedRgb = rgb(blendColors(parts));
+      const totalPigments = parts.reduce((sum, part) => sum + (part.pigment || "").split(/\s+/).filter(Boolean).length * part.weight, 0) / total;
+      const chromaLoss = Math.max(0, channelSpread(weightedRgb) - channelSpread(absorbent)) / 255;
+      const mud = Math.min(0.34, Math.max(0, parts.length - 1) * 0.055 + Math.max(0, totalPigments - 1.4) * 0.018 + chromaLoss * 0.13);
+      const gray = absorbent.reduce((sum, value) => sum + value, 0) / 3;
+      const grounded = absorbent.map((value) => value * (1 - mud) + gray * mud);
+      return hexFromRgb(grounded);
+    }
+
+    function applyWater(hex, water) {
+      return blendColors([
+        { hex, weight: 10 },
+        { hex: "#ffffff", weight: water }
+      ]);
+    }
+
+    function rgbToHsl([r, g, b]) {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      let h = 0;
+      let s = 0;
+      const l = (max + min) / 2;
+      if (max !== min) {
+        const delta = max - min;
+        s = l > 0.5 ? delta / (2 - max - min) : delta / (max + min);
+        switch (max) {
+          case r: h = (g - b) / delta + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / delta + 2; break;
+          default: h = (r - g) / delta + 4; break;
+        }
+        h /= 6;
+      }
+      return [h * 360, s * 100, l * 100];
+    }
+
+    function hslToRgb([h, s, l]) {
+      h = ((h % 360) + 360) % 360 / 360;
+      s /= 100;
+      l /= 100;
+      if (s === 0) {
+        const gray = l * 255;
+        return [gray, gray, gray];
+      }
+      const hue2rgb = (p, q, t) => {
+        if (t < 0) t += 1;
+        if (t > 1) t -= 1;
+        if (t < 1 / 6) return p + (q - p) * 6 * t;
+        if (t < 1 / 2) return q;
+        if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+        return p;
+      };
+      const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+      const p = 2 * l - q;
+      return [
+        hue2rgb(p, q, h + 1 / 3) * 255,
+        hue2rgb(p, q, h) * 255,
+        hue2rgb(p, q, h - 1 / 3) * 255
+      ];
+    }
+
+    function shiftLightness(hex, lightness, wash = 0) {
+      const [h, s] = rgbToHsl(rgb(hex));
+      const adjusted = hexFromRgb(hslToRgb([h, Math.min(100, s * 0.94), lightness]));
+      return wash ? applyWater(adjusted, wash) : adjusted;
+    }
+
+    function complementOf(hex) {
+      const [h, s, l] = rgbToHsl(rgb(hex));
+      return hexFromRgb(hslToRgb([(h + 180) % 360, Math.min(100, s * 0.88), Math.max(18, Math.min(78, l))]));
+    }
+
+    function distance(a, b) {
+      const ar = rgb(a);
+      const br = rgb(b);
+      return Math.sqrt(ar.reduce((sum, v, i) => sum + (v - br[i]) ** 2, 0));
+    }
+
+    function selectPaint(code) {
+      if (!byCode(code)) return;
+      selected = code;
+      renderPalette();
+      renderDetail();
+      renderCombos();
+    }
+
+    function paintButton(paint) {
+      const button = document.createElement("button");
+      button.className = "paint" + (paint.code === selected ? " selected" : "");
+      button.type = "button";
+      button.innerHTML = `
+        <div class="swatch" style="background:${paint.hex}"></div>
+        <strong>${paint.code}</strong>
+        <span>${paint.ko.replace(/\s+/g, " ")}</span>
+        <span class="paint-extra">${paint.pigment}</span>
+      `;
+      button.addEventListener("click", () => selectPaint(paint.code));
+      return button;
+    }
+
+    function renderPalette() {
+      const keyword = searchEl.value.trim().toLowerCase();
+      paletteEl.innerHTML = "";
+      allPaints().filter((paint) => {
+        const haystack = `${paint.code} ${paint.name} ${paint.ko} ${paint.pigment} ${paint.grade} ${paint.traits} ${paint.uses} ${paint.caution} ${paint.tint ? "틴트 특색" : ""}`.toLowerCase();
+        return haystack.includes(keyword);
+      }).forEach((paint) => paletteEl.appendChild(paintButton(paint)));
+    }
+
+    function renderDetail() {
+      const paint = byCode(selected);
+      detailEl.innerHTML = `
+        <div class="${detailCollapsed ? "detail-collapsed" : ""}">
+        <div class="details">
+          <div class="big-swatch" style="background:${paint.hex}"></div>
+          <div>
+            <div class="detail-head">
+              <h2>${paint.code} ${paint.ko} <span class="muted">${paint.name}</span></h2>
+              <button class="detail-toggle" id="detailToggle" type="button">${detailCollapsed ? "펼치기" : "접기"}</button>
+            </div>
+            <div class="detail-body">
+              <div class="meta">
+                <span class="pill">안료 ${paint.pigment}</span>
+                <span class="pill">${paint.grade}</span>
+                ${paint.tint ? `<span class="pill">틴트 특색</span>` : ""}
+              </div>
+              <p><strong>특징</strong> ${paint.traits}</p>
+              <p><strong>자주 쓰는 곳</strong> ${paint.uses}</p>
+              <p><strong>주의</strong> ${paint.caution}</p>
+            </div>
+          </div>
+        </div>
+        </div>
+      `;
+      document.querySelector("#detailToggle").addEventListener("click", () => {
+        detailCollapsed = !detailCollapsed;
+        renderDetail();
+      });
+    }
+
+    function renderCombos() {
+      comboList.innerHTML = "";
+      const related = combos.filter((combo) => combo.colors.includes(selected));
+      const list = related.length ? related : combos;
+      const selectedPaint = byCode(selected);
+      comboList.insertAdjacentHTML("beforeend", `
+        <div class="warning"><strong>${selectedPaint.code} ${selectedPaint.ko}</strong> 포함 조합 ${related.length}개를 표시합니다.${related.length ? "" : " 해당 색 포함 조합이 없어 전체 조합을 표시합니다."}</div>
+      `);
+      list.forEach((combo) => {
+        const item = document.createElement("article");
+        item.className = "combo";
+        const comboPaints = combo.colors.map(byCode);
+        item.innerHTML = `
+          <header><span>${combo.title}</span><small>${combo.scene}</small></header>
+          <p class="muted">${combo.note}</p>
+          <div class="strips">${comboPaints.filter(Boolean).map((paint) => `<button class="mini paint-ref" type="button" data-code="${paint.code}" title="${paint.ko}" style="background:${paint.hex}"></button>`).join("")}</div>
+        `;
+        comboList.appendChild(item);
+      });
+    }
+
+    function stepColor(step) {
+      const parts = step.colors.map(([code, weight]) => ({ ...byCode(code), weight })).filter((part) => part.hex);
+      return applyWater(mixColors(parts), step.water);
+    }
+
+    function formatRecipe(step) {
+      return step.colors.map(([code, weight]) => {
+        const paint = byCode(code);
+        return paint ? `${paint.ko} ${weight}` : `${code} ${weight}`;
+      }).join(" : ") + ` + 물 ${step.water}`;
+    }
+
+    function guideCategory(guide) {
+      if (guide.category) return guide.category;
+      if (["skin", "skinPresetBase", "skinPresetDark", "hair"].includes(guide.id)) return "인물";
+      if (["sky", "sunset", "shadow", "backlightPreset", "distancePreset", "smoke"].includes(guide.id)) return "배경";
+      if (["nature", "water"].includes(guide.id)) return "자연물";
+      if (["metal", "glass", "food", "whiteObject", "cloth"].includes(guide.id)) return "사물";
+      if (["fire", "horror", "neon"].includes(guide.id)) return "효과";
+      if (["tintSpecial"].includes(guide.id)) return "특색";
+      return "전체";
+    }
+
+    function guideMatchesQuery(guide) {
+      if (!guideQuery) return true;
+      const haystack = [
+        guide.title,
+        guide.scene,
+        guide.warning,
+        guide.palette.map((code) => {
+          const paint = byCode(code);
+          return paint ? paint.ko : code;
+        }).join(" "),
+        guide.values.map((step) => `${step.label} ${step.note} ${formatRecipe(step)}`).join(" ")
+      ].join(" ").toLowerCase();
+      return haystack.includes(guideQuery.toLowerCase());
+    }
+
+    function renderGuidePicker() {
+      const categories = ["전체", "인물", "배경", "자연물", "사물", "효과", "특색"];
+      guideCategories.innerHTML = categories.map((category) => `
+        <button class="category-button ${category === selectedGuideCategory ? "active" : ""}" type="button" data-category="${category}">${category}</button>
+      `).join("");
+      const filtered = guides.filter((guide) => {
+        if (guide.tintOnly && !tintEnabled) return false;
+        const categoryOk = selectedGuideCategory === "전체" || guideCategory(guide) === selectedGuideCategory;
+        return categoryOk && guideMatchesQuery(guide);
+      });
+      if (!filtered.some((guide) => guide.id === selectedGuide) && filtered.length) {
+        selectedGuide = filtered[0].id;
+      }
+      guideChipList.innerHTML = filtered.length ? filtered.map((guide) => `
+        <button class="guide-chip ${guide.id === selectedGuide ? "active" : ""}" type="button" data-guide="${guide.id}">
+          <strong>${guide.title}</strong><br><span class="muted">${guide.scene}</span>
+        </button>
+      `).join("") : `<div class="empty">검색 결과가 없습니다.</div>`;
+      guideCategories.querySelectorAll("[data-category]").forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedGuideCategory = button.dataset.category;
+          renderGuide();
+        });
+      });
+      guideChipList.querySelectorAll("[data-guide]").forEach((button) => {
+        button.addEventListener("click", () => {
+          selectedGuide = button.dataset.guide;
+          renderGuide();
+        });
+      });
+    }
+
+    function renderGuide() {
+      renderGuidePicker();
+      const guide = guides.find((item) => item.id === selectedGuide) || guides[0];
+
+      const palettePaints = guide.palette.map(byCode).filter(Boolean);
+      guideResult.innerHTML = `
+        <div>
+          <h3>${guide.title}</h3>
+          <p class="muted">${guide.scene}</p>
+          <div class="meta">
+            ${palettePaints.map((paint) => `<span class="pill">${paint.code} ${paint.ko}</span>`).join("")}
+          </div>
+          <div class="strips">
+            ${palettePaints.map((paint) => `<button class="mini paint-ref" type="button" data-code="${paint.code}" title="${paint.ko}" style="background:${paint.hex}"></button>`).join("")}
+          </div>
+        </div>
+        <div>
+          <h3>명도 단계</h3>
+          <div class="step-grid">
+            ${guide.values.map((step) => {
+              const color = stepColor(step);
+              return `
+              <article class="value-step">
+                <span class="mini" style="background:${color}"></span>
+                <div>
+                  <strong>${step.label}</strong>
+                  <p class="recipe">${formatRecipe(step)}</p>
+                  <p class="note">${step.note}</p>
+                </div>
+              </article>
+            `}).join("")}
+          </div>
+        </div>
+        <div>
+          <h3>칠하는 순서</h3>
+          <ol class="ordered">
+            ${guide.steps.map((step) => `<li>${step}</li>`).join("")}
+          </ol>
+        </div>
+        <div class="warning"><strong>주의</strong> ${guide.warning}</div>
+      `;
+    }
+
+    function setupMixControls() {
+      addSelectedPaint.addEventListener("click", () => addPaintToMix(selected));
+      clearMixPaints.addEventListener("click", () => {
+        mixPaintCodes = [];
+        mixPaintValues = {};
+        renderMixSliders();
+        renderMix();
+      });
+      renderMixSliders();
+      renderMix();
+    }
+
+    function addPaintToMix(code, value = 25) {
+      if (!mixPaintCodes.includes(code)) {
+        mixPaintCodes.push(code);
+        mixPaintValues[code] = value;
+      } else {
+        mixPaintValues[code] = Math.max(mixPaintValues[code] || value, value);
+      }
+      renderMixSliders();
+      renderMix();
+    }
+
+    function removePaintFromMix(code) {
+      mixPaintCodes = mixPaintCodes.filter((item) => item !== code);
+      delete mixPaintValues[code];
+      renderMixSliders();
+      renderMix();
+    }
+
+    function syncTintState() {
+      tintEnabled = tintToggle.checked;
+      if (!tintEnabled) {
+        mixPaintCodes = mixPaintCodes.filter((code) => {
+          const paint = byCode(code);
+          return !paint || !paint.tint;
+        });
+        Object.keys(mixPaintValues).forEach((code) => {
+          const paint = byCode(code);
+          if (paint && paint.tint) delete mixPaintValues[code];
+        });
+        const selectedPaint = byCode(selected);
+        if (selectedPaint && selectedPaint.tint) selected = paints[0].code;
+      }
+      renderPalette();
+      renderDetail();
+      renderCombos();
+      renderGuide();
+      renderMixSliders();
+      renderMix();
+    }
+
+    function renderMixSliders() {
+      if (!mixPaintCodes.length) {
+        sliderMixer.innerHTML = `
+          <div class="empty">팔레트에서 색을 선택한 뒤 조색 탭의 “현재 선택 색 추가” 버튼을 사용하세요.</div>
+          ${waterSliderMarkup()}
+        `;
+      } else {
+        sliderMixer.innerHTML = mixPaintCodes.map((code) => {
+        const paint = byCode(code);
+        if (!paint) return "";
+        return `
+          <div class="paint-slider">
+            <header>
+              <button class="mini paint-ref" type="button" data-code="${paint.code}" style="background:${paint.hex}" title="${paint.ko}"></button>
+              <strong>${paint.code} ${paint.ko}</strong>
+              <span id="simValue-${paint.code}">${mixPaintValues[code] || 0}%</span>
+              <button class="ghost-button" type="button" data-remove="${paint.code}">제거</button>
+            </header>
+            <input id="simSlider-${paint.code}" data-code="${paint.code}" type="range" min="0" max="100" value="${mixPaintValues[code] || 0}">
+            <span class="muted">${paint.name} · ${paint.pigment}</span>
+          </div>
+        `;
+        }).join("") + waterSliderMarkup();
+      }
+
+      sliderMixer.querySelectorAll("input").forEach((input) => {
+        input.addEventListener("input", () => {
+          if (input.dataset.code === "water") {
+            mixWater = Number(input.value);
+          } else {
+            mixPaintValues[input.dataset.code] = Number(input.value);
+          }
+          renderMix();
+        });
+      });
+      sliderMixer.querySelectorAll("[data-remove]").forEach((button) => {
+        button.addEventListener("click", () => removePaintFromMix(button.dataset.remove));
+      });
+    }
+
+    function waterSliderMarkup() {
+      return `
+        <div class="paint-slider">
+          <header>
+            <span class="mini" style="background:#ffffff"></span>
+            <strong>물 조절</strong>
+            <span id="simValue-water">${mixWater}%</span>
+            <span></span>
+          </header>
+          <input id="simSlider-water" data-code="water" type="range" min="0" max="100" value="${mixWater}">
+          <span class="muted">흰 물감 혼합이 아니라 종이 흰색이 비쳐 보이는 정도입니다.</span>
+        </div>
+      `;
+    }
+
+    function renderMix() {
+      const parts = mixPaintCodes.map((code) => {
+        const value = Number(mixPaintValues[code] || 0);
+        const paint = byCode(code);
+        const valueEl = document.getElementById(`simValue-${code}`);
+        if (valueEl) valueEl.textContent = `${value}%`;
+        return paint && value > 0 ? { ...paint, weight: value } : null;
+      }).filter(Boolean);
+      const water = mixWater;
+      const waterEl = document.getElementById("simValue-water");
+      if (waterEl) waterEl.textContent = `${water}%`;
+      const baseMixed = mixColors(parts.length ? parts : [{ ...byCode("A970"), weight: 1 }]);
+      const mixed = applyWater(baseMixed, water / 5);
+      const [h, s, l] = rgbToHsl(rgb(mixed));
+      const valueSteps = [
+        { label: "하이라이트", lightness: Math.min(96, l + 34), wash: 15 },
+        { label: "밝은 명부", lightness: Math.min(88, l + 20), wash: 8 },
+        { label: "중간면", lightness: l, wash: 0 },
+        { label: "암부", lightness: Math.max(24, l - 18), wash: 0 },
+        { label: "다크사이드", lightness: Math.max(12, l - 34), wash: 0 }
+      ];
+      const comp = complementOf(mixed);
+      const total = parts.reduce((sum, part) => sum + part.weight, 0) || 1;
+      const normalized = parts.map((part) => `${part.ko} ${Math.round(part.weight / total * 100)}%`);
+
+      simResultChip.style.setProperty("--sim-result", mixed);
+      simResultCode.textContent = mixed.toUpperCase();
+      simMixMeta.innerHTML = [
+        `<span class="pill">원색 조합 ${baseMixed.toUpperCase()}</span>`,
+        `<span class="pill">물 ${water}%</span>`,
+        `<span class="pill">HSL ${Math.round(h)} / ${Math.round(s)} / ${Math.round(l)}</span>`
+      ].join("") + parts.map((part) => `<span class="pill">${part.code} ${part.weight}%</span>`).join("");
+      valueScale.innerHTML = valueSteps.map((step) => {
+        const color = shiftLightness(mixed, step.lightness, step.wash);
+        return `
+          <article class="value-chip">
+            <span class="mini" style="background:${color}"></span>
+            <strong>${step.label}</strong>
+            <span class="muted">${color.toUpperCase()}</span>
+          </article>
+        `;
+      }).join("");
+      complementChip.style.background = comp;
+      complementCode.textContent = comp.toUpperCase();
+      complementText.textContent = `현재 결과색의 HSL 180도 회전 보색입니다. 역광, 반사광, 어둠 흐름을 만들 때 ${comp.toUpperCase()} 계열을 소량 섞어 채도와 온도를 조절하세요.`;
+      realismNote.innerHTML = `<strong>실제 수채화 근사</strong> 안료 흡수 기반 감산혼합, 혼합 안료 탁도, 물 농도에 따른 종이 흰색 반영을 적용했습니다. 현재 유효 조합: ${normalized.join(" · ") || "없음"}.`;
+    }
+
+    function recipeName(recipe) {
+      const names = recipe.parts.map((part) => `${part.paint.ko} ${part.weight}`).join(" : ");
+      return recipe.wash ? `${names} + 물 ${recipe.wash}` : names;
+    }
+
+    function bestRecipes(targetHex, limit = 5) {
+      const candidates = [];
+      const addCandidate = (parts) => {
+        const base = mixColors(parts.map((part) => ({ ...part.paint, weight: part.weight })));
+        [0, 1, 2, 3, 5, 8].forEach((wash) => {
+          const hex = applyWater(base, wash);
+          candidates.push({ hex, parts, wash, score: distance(targetHex, hex) });
+        });
+      };
+      allPaints().forEach((paint) => {
+        addCandidate([{ paint, weight: 1 }]);
+      });
+      const candidatesPaints = allPaints();
+      for (let i = 0; i < candidatesPaints.length; i++) {
+        for (let j = i + 1; j < candidatesPaints.length; j++) {
+          [1, 2, 3, 4].forEach((a) => {
+            [1, 2, 3, 4].forEach((b) => {
+              addCandidate([{ paint: candidatesPaints[i], weight: a }, { paint: candidatesPaints[j], weight: b }]);
+            });
+          });
+        }
+      }
+      return candidates.sort((a, b) => a.score - b.score).slice(0, limit);
+    }
+
+    function renderMatches(hex) {
+      const recipes = bestRecipes(hex);
+      matchesEl.innerHTML = recipes.map((recipe) => `
+        <div class="match">
+          <span class="mini" style="background:${recipe.hex}"></span>
+          <div>
+            <strong>${recipeName(recipe)}</strong>
+            <div class="muted">예상 ${recipe.hex.toUpperCase()} · 차이 ${Math.round(recipe.score)}${recipe.wash ? " · 흰색 혼합이 아니라 물 조절 기준" : ""}</div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function analyzeImageColors() {
+      const buckets = new Map();
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      const stride = Math.max(1, Math.floor(Math.min(canvas.width, canvas.height) / 80));
+      for (let y = 0; y < canvas.height; y += stride) {
+        for (let x = 0; x < canvas.width; x += stride) {
+          const index = (y * canvas.width + x) * 4;
+          const alpha = data[index + 3];
+          if (alpha < 128) continue;
+          const color = [data[index], data[index + 1], data[index + 2]];
+          const brightness = (color[0] + color[1] + color[2]) / 3;
+          if (brightness > 246 || brightness < 12) continue;
+          const key = color.map((value) => Math.round(value / 32) * 32).join(",");
+          const bucket = buckets.get(key) || { count: 0, rgb: [0, 0, 0] };
+          bucket.count += 1;
+          bucket.rgb = bucket.rgb.map((value, channel) => value + color[channel]);
+          buckets.set(key, bucket);
+        }
+      }
+
+      const totalSamples = [...buckets.values()].reduce((sum, bucket) => sum + bucket.count, 0) || 1;
+      const dominant = [...buckets.values()]
+        .map((bucket) => ({ count: bucket.count, ratio: bucket.count / totalSamples, hex: hexFromRgb(bucket.rgb.map((value) => value / bucket.count)) }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+      if (!dominant.length) {
+        matchesEl.innerHTML = `<div class="empty">이미지에서 분석할 색을 충분히 찾지 못했습니다. 캔버스에서 직접 색을 클릭하세요.</div>`;
+        return;
+      }
+
+      matchesEl.innerHTML = `
+        <div class="combo">
+          <header><span>이미지 전체 컬러 팔레트</span><small>주요 색 ${dominant.length}개 자동 분석</small></header>
+          <p class="muted">아래 색칩을 클릭하면 해당 색의 상세 조색 추천으로 전환됩니다.</p>
+          <div class="strips">
+            ${dominant.map((item) => `<button class="mini dominant-color" type="button" data-hex="${item.hex}" title="${item.hex.toUpperCase()}" style="background:${item.hex}"></button>`).join("")}
+          </div>
+        </div>
+        ${dominant.map((item) => {
+          const recipe = bestRecipes(item.hex, 1)[0];
+          const nearest = allPaints().map((paint) => ({ paint, score: distance(item.hex, paint.hex) })).sort((a, b) => a.score - b.score)[0].paint;
+          return `
+            <div class="analysis-card">
+              <span class="mini" style="background:${item.hex}"></span>
+              <div>
+                <strong>${item.hex.toUpperCase()} · 비중 ${Math.round(item.ratio * 100)}%</strong>
+                <div class="muted">가까운 단색: ${nearest.code} ${nearest.ko}</div>
+                <div class="muted">추천 조색: ${recipeName(recipe)} · 예상 ${recipe.hex.toUpperCase()}</div>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      `;
+
+      document.querySelectorAll(".dominant-color").forEach((button) => {
+        button.addEventListener("click", () => {
+          const hex = button.dataset.hex;
+          pickedColor.style.setProperty("--mix-color", hex);
+          renderMatches(hex);
+        });
+      });
+    }
+
+    function drawImageToCanvas(file) {
+      const image = new Image();
+      image.onload = () => {
+        const max = 560;
+        const scale = Math.min(max / image.width, max / image.height, 1);
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        imageReady = true;
+        analyzeImageColors();
+      };
+      image.src = URL.createObjectURL(file);
+    }
+
+    function switchView(viewName) {
+      tabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.view === viewName));
+      views.forEach((view) => view.hidden = !view.classList.contains(`view-${viewName}`));
+    }
+
+    tabs.forEach((button) => {
+      button.addEventListener("click", () => switchView(button.dataset.view));
+    });
+
+    document.addEventListener("click", (event) => {
+      const paintRef = event.target.closest(".paint-ref");
+      if (!paintRef) return;
+      selectPaint(paintRef.dataset.code);
+    });
+
+    modeToggle.addEventListener("click", () => {
+      setMode(document.body.classList.contains("dark") ? "light" : "dark");
+    });
+    searchEl.addEventListener("input", renderPalette);
+    tintToggle.addEventListener("change", syncTintState);
+    guideSearch.addEventListener("input", () => {
+      guideQuery = guideSearch.value.trim();
+      renderGuide();
+    });
+    imageInput.addEventListener("change", (event) => {
+      const [file] = event.target.files;
+      if (file) drawImageToCanvas(file);
+    });
+    canvas.addEventListener("click", (event) => {
+      if (!imageReady) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor((event.clientX - rect.left) * canvas.width / rect.width);
+      const y = Math.floor((event.clientY - rect.top) * canvas.height / rect.height);
+      const data = ctx.getImageData(x, y, 1, 1).data;
+      const hex = hexFromRgb([data[0], data[1], data[2]]);
+      pickedColor.style.setProperty("--mix-color", hex);
+      renderMatches(hex);
+    });
+
+    setMode(savedMode());
+    renderPalette();
+    renderDetail();
+    renderCombos();
+    renderGuide();
+    setupMixControls();
+
+    if ("serviceWorker" in navigator && location.protocol.indexOf("http") === 0) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>

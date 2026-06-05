@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" role="img" aria-label="수채화 조색 도구 아이콘">
+  <rect width="180" height="180" rx="36" fill="#fbfaf7"/>
+  <path d="M35 114c14-39 30-67 55-85 27 18 48 50 55 85 4 23-13 40-55 40s-63-17-55-40z" fill="#ee6728"/>
+  <path d="M43 116c11-30 27-53 47-69 22 16 39 41 47 69 5 17-8 28-47 28s-53-11-47-28z" fill="#ffb347" opacity=".72"/>
+  <path d="M70 88c11-13 23-24 37-33 11 12 20 27 25 43-17-7-38-10-62-10z" fill="#d9364f" opacity=".82"/>
+  <path d="M49 127c22 9 58 10 85 1" fill="none" stroke="#ffffff" stroke-width="10" stroke-linecap="round" opacity=".7"/>
+  <circle cx="60" cy="59" r="10" fill="#ffffff" opacity=".86"/>
+</svg>

@@ -1,0 +1,26 @@
+{
+  "name": "수채화 조색 도구",
+  "short_name": "수채화 조색",
+  "description": "신한 SWC 32색과 틴트 12색을 기반으로 조색, 명도 단계, 채색 가이드, 이미지 색상 매칭을 제공하는 인터랙티브 수채화 도구",
+  "lang": "ko-KR",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fbfaf7",
+  "theme_color": "#ee6728",
+  "icons": [
+    {
+      "src": "watercolor-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "watercolor-icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
