@@ -889,6 +889,27 @@
       align-items: start;
     }
 
+    .image-drop-zone {
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: var(--panel-soft);
+      display: grid;
+      gap: 10px;
+      transition: border-color .16s ease, background .16s ease;
+    }
+
+    .image-drop-zone.dragging {
+      border-color: var(--accent);
+      background: var(--accent-weak);
+    }
+
+    .drop-help {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
     canvas {
       display: block;
       width: 100%;
@@ -903,6 +924,39 @@
     .matches {
       display: grid;
       gap: 10px;
+    }
+
+    .palette-details {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .palette-details summary {
+      cursor: pointer;
+      list-style: none;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-soft);
+      color: var(--ink);
+      padding: 11px 12px;
+      font-weight: 800;
+    }
+
+    .palette-details summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .palette-details summary::after {
+      content: "접기";
+      float: right;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .palette-details:not([open]) summary::after {
+      content: "펼치기";
     }
 
     .match {
@@ -1210,13 +1264,23 @@
         <h2>이미지 컬러팔레트 분석</h2>
         <div class="image-zone">
           <div>
-            <label class="control">이미지 파일 선택<input id="imageInput" type="file" accept="image/*"></label>
-            <canvas id="imageCanvas" width="420" height="420" aria-label="업로드 이미지 캔버스"></canvas>
+            <div class="image-drop-zone" id="imageDropZone">
+              <label class="control">이미지 파일 선택<input id="imageInput" type="file" accept="image/*"></label>
+              <p class="drop-help">이미지를 이 영역에 드래그하거나, 이미지 탭을 연 상태에서 클립보드 이미지를 붙여넣을 수 있습니다.</p>
+              <canvas id="imageCanvas" width="420" height="420" aria-label="업로드 이미지 캔버스"></canvas>
+            </div>
           </div>
           <div>
             <h3>이미지 팔레트와 추천 조색</h3>
+            <details class="palette-details" open>
+              <summary>자동분석 전체 팔레트</summary>
+              <div class="matches" id="matches">
+                <div class="empty">이미지를 올리면 한 장의 주요 컬러팔레트를 자동 분석합니다. 분석 후 색칩이나 캔버스를 클릭하면 상세 조색을 볼 수 있습니다.</div>
+              </div>
+            </details>
+            <h3>선택 색 분석</h3>
             <div id="pickedColor" class="mixed-chip" style="height:76px;margin-bottom:12px;"></div>
-            <div class="matches" id="matches">
+            <div class="matches" id="pickedMatches">
               <div class="empty">이미지를 올리면 한 장의 주요 컬러팔레트를 자동 분석합니다. 분석 후 색칩이나 캔버스를 클릭하면 상세 조색을 볼 수 있습니다.</div>
             </div>
           </div>
@@ -2302,10 +2366,12 @@
     const tintToggle = document.querySelector("#tintToggle");
     const posterToggle = document.querySelector("#posterToggle");
     const imageInput = document.querySelector("#imageInput");
+    const imageDropZone = document.querySelector("#imageDropZone");
     const canvas = document.querySelector("#imageCanvas");
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     const pickedColor = document.querySelector("#pickedColor");
     const matchesEl = document.querySelector("#matches");
+    const pickedMatchesEl = document.querySelector("#pickedMatches");
     let selected = paints[0].code;
     let selectedGuide = guides[0].id;
     let selectedGuideCategory = "전체";
@@ -2988,7 +3054,7 @@
       const [h, s, l] = rgbToHsl(rgb(hex));
       const role = l >= 74 ? "밝은 면/하이라이트 후보" : l >= 45 ? "중간면 후보" : "암부/접지부 후보";
       const nearest = allPaints().map((paint) => ({ paint, score: distance(hex, paint.hex) })).sort((a, b) => a.score - b.score)[0].paint;
-      matchesEl.innerHTML = `
+      pickedMatchesEl.innerHTML = `
         <div class="analysis-card">
           <span class="mini" style="background:${hex}"></span>
           <div>
@@ -3020,7 +3086,9 @@
           const color = [data[index], data[index + 1], data[index + 2]];
           const brightness = (color[0] + color[1] + color[2]) / 3;
           if (brightness > 248 || brightness < 8) continue;
-          samples.push({ rgb: color, brightness, hex: hexFromRgb(color) });
+          const hex = hexFromRgb(color);
+          const [h, s, l] = rgbToHsl(color);
+          samples.push({ rgb: color, brightness, hex, h, s, l });
         }
       }
       return samples;
@@ -3029,7 +3097,7 @@
     function bucketDominant(samples) {
       const buckets = new Map();
       samples.forEach((sample) => {
-        const key = sample.rgb.map((value) => Math.round(value / 32) * 32).join(",");
+        const key = sample.rgb.map((value) => Math.round(value / 24) * 24).join(",");
         const bucket = buckets.get(key) || { count: 0, rgb: [0, 0, 0], brightness: 0 };
         bucket.count += 1;
         bucket.rgb = bucket.rgb.map((value, channel) => value + sample.rgb[channel]);
@@ -3038,19 +3106,137 @@
       });
       const totalSamples = [...buckets.values()].reduce((sum, bucket) => sum + bucket.count, 0) || 1;
       return [...buckets.values()]
-        .map((bucket) => ({
-          count: bucket.count,
-          ratio: bucket.count / totalSamples,
-          brightness: bucket.brightness / bucket.count,
-          hex: hexFromRgb(bucket.rgb.map((value) => value / bucket.count))
-        }))
+        .map((bucket) => {
+          const hex = hexFromRgb(bucket.rgb.map((value) => value / bucket.count));
+          const [h, s, l] = rgbToHsl(rgb(hex));
+          return {
+            count: bucket.count,
+            ratio: bucket.count / totalSamples,
+            brightness: bucket.brightness / bucket.count,
+            hex,
+            h,
+            s,
+            l
+          };
+        })
         .sort((a, b) => b.count - a.count);
+    }
+
+    function isSimilarPaletteColor(a, b) {
+      const colorGap = distance(a.hex, b.hex);
+      const lightGap = Math.abs(a.brightness - b.brightness);
+      const hueGap = Math.min(Math.abs(a.h - b.h), 360 - Math.abs(a.h - b.h));
+      if (a.s < 18 && b.s < 18) return lightGap < 42;
+      return colorGap < 54 && lightGap < 34 && hueGap < 24;
+    }
+
+    function hueFamily(item) {
+      if (item.s < 18) return "무채색";
+      if (item.h < 18 || item.h >= 342) return "빨강";
+      if (item.h < 45) return "주황";
+      if (item.h < 72) return "노랑";
+      if (item.h < 155) return "초록/민트";
+      if (item.h < 205) return "청록";
+      if (item.h < 255) return "파랑";
+      if (item.h < 292) return "보라";
+      return "분홍/자주";
+    }
+
+    function sampleColorGroup(sample) {
+      const family = hueFamily(sample);
+      if (family === "무채색") return `${family}-${toneRole(sample.brightness)}`;
+      return family;
+    }
+
+    function colorGroupLabel(key) {
+      return key.replace("무채색-", "무채색 ");
+    }
+
+    function colorGroupPalette(samples, limit = 10) {
+      const groups = new Map();
+      samples.forEach((sample) => {
+        const key = sampleColorGroup(sample);
+        const group = groups.get(key) || { key, count: 0, rgb: [0, 0, 0], brightness: 0 };
+        group.count += 1;
+        group.rgb = group.rgb.map((value, channel) => value + sample.rgb[channel]);
+        group.brightness += sample.brightness;
+        groups.set(key, group);
+      });
+
+      const ranked = [...groups.values()]
+        .map((group) => {
+          const hex = hexFromRgb(group.rgb.map((value) => value / group.count));
+          const [h, s, l] = rgbToHsl(rgb(hex));
+          return {
+            key: group.key,
+            family: colorGroupLabel(group.key),
+            count: group.count,
+            ratio: group.count / (samples.length || 1),
+            brightness: group.brightness / group.count,
+            hex,
+            h,
+            s,
+            l
+          };
+        })
+        .sort((a, b) => b.count - a.count)
+        .slice(0, limit);
+
+      const selectedTotal = ranked.reduce((sum, item) => sum + item.count, 0) || 1;
+      return ranked.map((item) => ({ ...item, displayRatio: item.count / selectedTotal }));
+    }
+
+    function diverseDominantColors(candidates, limit = 10) {
+      const selected = [];
+      const addDiverse = (item) => {
+        if (selected.length >= limit) return;
+        if (selected.some((chosen) => isSimilarPaletteColor(item, chosen))) return;
+        selected.push(item);
+      };
+
+      candidates.forEach(addDiverse);
+
+      const importantFamilies = ["빨강", "주황", "노랑", "초록/민트", "청록", "파랑", "보라", "분홍/자주"];
+      importantFamilies.forEach((family) => {
+        if (selected.some((item) => hueFamily(item) === family)) return;
+        const familyCandidate = candidates
+          .filter((item) => hueFamily(item) === family && item.s >= 22 && item.ratio >= 0.0015)
+          .sort((a, b) => (b.ratio * 100 + b.s * 0.08) - (a.ratio * 100 + a.s * 0.08))[0];
+        if (!familyCandidate || selected.some((chosen) => isSimilarPaletteColor(familyCandidate, chosen))) return;
+
+        const replaceTarget = selected
+          .map((item, index) => ({ item, index }))
+          .filter(({ item }) => hueFamily(item) === "무채색" || selected.filter((color) => hueFamily(color) === hueFamily(item)).length > 1)
+          .sort((a, b) => a.item.ratio - b.item.ratio)[0];
+        const replaceIndex = replaceTarget ? replaceTarget.index : undefined;
+
+        if (replaceIndex !== undefined && familyCandidate.ratio >= selected[replaceIndex].ratio * 0.2) {
+          selected[replaceIndex] = familyCandidate;
+        }
+      });
+
+      const neutralItems = selected.filter((item) => hueFamily(item) === "무채색").sort((a, b) => b.ratio - a.ratio);
+      if (neutralItems.length > 3) {
+        const keepNeutral = new Set(neutralItems.slice(0, 3));
+        const balanced = selected.filter((item) => hueFamily(item) !== "무채색" || keepNeutral.has(item));
+        selected.length = 0;
+        balanced.forEach((item) => selected.push(item));
+        candidates.forEach(addDiverse);
+      }
+
+      return selected.slice(0, limit).sort((a, b) => b.ratio - a.ratio);
     }
 
     function toneRole(brightness) {
       if (brightness >= 178) return "밝은색";
       if (brightness >= 82) return "중간색";
       return "어두운색";
+    }
+
+    function formatPercent(ratio) {
+      const percent = ratio * 100;
+      if (percent > 0 && percent < 1) return `${percent.toFixed(1)}%`;
+      return `${Math.round(percent)}%`;
     }
 
     function toneAdvice(role) {
@@ -3061,7 +3247,8 @@
 
     function analyzeImageColors() {
       const samples = analyzePixelSamples();
-      const dominant = bucketDominant(samples).slice(0, 10);
+      const bucketed = bucketDominant(samples);
+      const dominant = colorGroupPalette(samples, 10);
 
       if (!dominant.length) {
         matchesEl.innerHTML = `<div class="empty">이미지에서 분석할 색을 충분히 찾지 못했습니다. 캔버스에서 직접 색을 클릭하세요.</div>`;
@@ -3069,14 +3256,16 @@
       }
 
       const groups = ["밝은색", "중간색", "어두운색"].map((role) => {
-        const colors = dominant.filter((item) => toneRole(item.brightness) === role).slice(0, 4);
-        return { role, colors };
+        const allRoleColors = bucketed.filter((item) => toneRole(item.brightness) === role);
+        const ratio = allRoleColors.reduce((sum, item) => sum + item.ratio, 0);
+        const colors = diverseDominantColors(allRoleColors, 4);
+        return { role, colors, ratio };
       });
 
       matchesEl.innerHTML = `
         <div class="combo">
-          <header><span>이미지 전체 컬러 팔레트</span><small>주요 색 ${dominant.length}개 자동 분석</small></header>
-          <p class="muted">아래 색칩을 클릭하면 해당 색의 상세 조색 추천으로 전환됩니다.</p>
+          <header><span>이미지 전체 컬러 팔레트</span><small>색상군 ${dominant.length}개 · 합계 100%</small></header>
+          <p class="muted">이미지의 세부 질감을 넓은 색상군으로 묶어, 물감으로 구현하기 쉬운 대표색과 비중을 보여줍니다.</p>
           <div class="strips">
             ${dominant.map((item) => `<button class="mini dominant-color" type="button" data-hex="${item.hex}" title="${item.hex.toUpperCase()}" style="background:${item.hex}"></button>`).join("")}
           </div>
@@ -3084,7 +3273,7 @@
         <div class="tone-groups">
           ${groups.map((group) => `
             <div class="tone-group">
-              <strong>${group.role}</strong>
+              <strong>${group.role} · ${formatPercent(group.ratio)}</strong>
               <div class="tone-strip">
                 ${group.colors.length ? group.colors.map((item) => `<button class="mini dominant-color" type="button" data-hex="${item.hex}" title="${item.hex.toUpperCase()}" style="background:${item.hex}"></button>`).join("") : `<span class="muted">색 부족</span>`}
               </div>
@@ -3100,7 +3289,7 @@
             <div class="analysis-card">
               <span class="mini" style="background:${item.hex}"></span>
               <div>
-                <strong>${role} · 비중 ${Math.round(item.ratio * 100)}%</strong>
+                <strong>${item.family} · ${role} · 비중 ${formatPercent(item.displayRatio)}</strong>
                 <div class="muted">가까운 단색: ${nearest.code} ${nearest.ko}</div>
                 <div class="muted">추천 조색: ${recipeName(recipe)} · 예상 ${recipe.hex.toUpperCase()}</div>
                 <div class="muted">단순화: ${toneAdvice(role)}</div>
@@ -3140,7 +3329,7 @@
     function drawImageToCanvas(file) {
       const image = new Image();
       image.onload = () => {
-        const max = 560;
+        const max = 1200;
         const scale = Math.min(max / image.width, max / image.height, 1);
         canvas.width = Math.max(1, Math.round(image.width * scale));
         canvas.height = Math.max(1, Math.round(image.height * scale));
@@ -3148,8 +3337,20 @@
         ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
         imageReady = true;
         analyzeImageColors();
+        pickedMatchesEl.innerHTML = `<div class="empty">자동분석 팔레트의 색칩이나 이미지 위 원하는 지점을 클릭하면 선택 색 분석이 여기에 표시됩니다.</div>`;
       };
       image.src = URL.createObjectURL(file);
+    }
+
+    function firstImageFile(fileList) {
+      return Array.from(fileList || []).find((file) => file.type && file.type.startsWith("image/"));
+    }
+
+    function handleImageFile(file) {
+      if (!file) return false;
+      drawImageToCanvas(file);
+      imageInput.value = "";
+      return true;
     }
 
     function switchView(viewName) {
@@ -3186,7 +3387,25 @@
     });
     imageInput.addEventListener("change", (event) => {
       const [file] = event.target.files;
-      if (file) drawImageToCanvas(file);
+      handleImageFile(file);
+    });
+    imageDropZone.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      imageDropZone.classList.add("dragging");
+    });
+    imageDropZone.addEventListener("dragleave", (event) => {
+      if (!imageDropZone.contains(event.relatedTarget)) imageDropZone.classList.remove("dragging");
+    });
+    imageDropZone.addEventListener("drop", (event) => {
+      event.preventDefault();
+      imageDropZone.classList.remove("dragging");
+      handleImageFile(firstImageFile(event.dataTransfer.files));
+    });
+    document.addEventListener("paste", (event) => {
+      const imageViewActive = !document.querySelector(".view-image").hidden;
+      if (!imageViewActive) return;
+      const file = firstImageFile(event.clipboardData && event.clipboardData.files);
+      if (handleImageFile(file)) event.preventDefault();
     });
     canvas.addEventListener("click", (event) => {
       if (!imageReady) return;
