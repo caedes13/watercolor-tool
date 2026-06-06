@@ -914,11 +914,25 @@
       display: block;
       width: 100%;
       max-width: 100%;
-      min-height: 360px;
+      height: auto;
       border: 1px solid var(--line);
       border-radius: 8px;
       background: var(--control);
       cursor: crosshair;
+    }
+
+    .canvas-frame {
+      width: 100%;
+      max-width: 100%;
+      overflow: hidden;
+      border-radius: 8px;
+      background: var(--control);
+      touch-action: none;
+    }
+
+    .canvas-frame canvas {
+      transform-origin: center center;
+      will-change: transform;
     }
 
     .matches {
@@ -1133,6 +1147,10 @@
         padding: 16px;
       }
 
+      body {
+        overflow-x: hidden;
+      }
+
       .mix-controls, .step-grid, .value-scale, .preset-grid {
         grid-template-columns: 1fr;
       }
@@ -1267,7 +1285,9 @@
             <div class="image-drop-zone" id="imageDropZone">
               <label class="control">이미지 파일 선택<input id="imageInput" type="file" accept="image/*"></label>
               <p class="drop-help">이미지를 이 영역에 드래그하거나, 이미지 탭을 연 상태에서 클립보드 이미지를 붙여넣을 수 있습니다.</p>
-              <canvas id="imageCanvas" width="420" height="420" aria-label="업로드 이미지 캔버스"></canvas>
+              <div class="canvas-frame" id="canvasFrame">
+                <canvas id="imageCanvas" width="420" height="420" aria-label="업로드 이미지 캔버스"></canvas>
+              </div>
             </div>
           </div>
           <div>
@@ -2367,6 +2387,7 @@
     const posterToggle = document.querySelector("#posterToggle");
     const imageInput = document.querySelector("#imageInput");
     const imageDropZone = document.querySelector("#imageDropZone");
+    const canvasFrame = document.querySelector("#canvasFrame");
     const canvas = document.querySelector("#imageCanvas");
     const ctx = canvas.getContext("2d", { willReadFrequently: true });
     const pickedColor = document.querySelector("#pickedColor");
@@ -2383,6 +2404,15 @@
     let posterEnabled = false;
     let detailCollapsed = false;
     let imageReady = false;
+    let imageZoom = 1;
+    let imagePanX = 0;
+    let imagePanY = 0;
+    let pinchStartDistance = 0;
+    let pinchStartZoom = 1;
+    let pinchStartCenter = null;
+    let pinchStartPan = { x: 0, y: 0 };
+    let panStartPoint = null;
+    let panStart = { x: 0, y: 0 };
     let savedRecipes = [];
     const mobileQuery = window.matchMedia("(max-width: 920px)");
 
@@ -3326,6 +3356,40 @@
       return hexFromRgb(count ? sum.map((value) => value / count) : [0, 0, 0]);
     }
 
+    function clampImagePan() {
+      const frameRect = canvasFrame.getBoundingClientRect();
+      const canvasRect = canvas.getBoundingClientRect();
+      const maxX = Math.max(0, (canvasRect.width - frameRect.width) / 2 + 24);
+      const maxY = Math.max(0, (canvasRect.height - frameRect.height) / 2 + 24);
+      imagePanX = Math.max(-maxX, Math.min(maxX, imagePanX));
+      imagePanY = Math.max(-maxY, Math.min(maxY, imagePanY));
+    }
+
+    function applyImageTransform() {
+      clampImagePan();
+      canvas.style.transform = `translate(${imagePanX}px, ${imagePanY}px) scale(${imageZoom})`;
+    }
+
+    function resetImageTransform() {
+      imageZoom = 1;
+      imagePanX = 0;
+      imagePanY = 0;
+      canvas.style.transform = "translate(0px, 0px) scale(1)";
+    }
+
+    function touchDistance(touches) {
+      const dx = touches[0].clientX - touches[1].clientX;
+      const dy = touches[0].clientY - touches[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function touchCenter(touches) {
+      return {
+        x: (touches[0].clientX + touches[1].clientX) / 2,
+        y: (touches[0].clientY + touches[1].clientY) / 2
+      };
+    }
+
     function drawImageToCanvas(file) {
       const image = new Image();
       image.onload = () => {
@@ -3335,6 +3399,7 @@
         canvas.height = Math.max(1, Math.round(image.height * scale));
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        resetImageTransform();
         imageReady = true;
         analyzeImageColors();
         pickedMatchesEl.innerHTML = `<div class="empty">자동분석 팔레트의 색칩이나 이미지 위 원하는 지점을 클릭하면 선택 색 분석이 여기에 표시됩니다.</div>`;
@@ -3400,6 +3465,41 @@
       event.preventDefault();
       imageDropZone.classList.remove("dragging");
       handleImageFile(firstImageFile(event.dataTransfer.files));
+    });
+    canvasFrame.addEventListener("touchstart", (event) => {
+      if (event.touches.length === 2) {
+        event.preventDefault();
+        pinchStartDistance = touchDistance(event.touches);
+        pinchStartZoom = imageZoom;
+        pinchStartCenter = touchCenter(event.touches);
+        pinchStartPan = { x: imagePanX, y: imagePanY };
+      } else if (event.touches.length === 1 && imageZoom > 1) {
+        event.preventDefault();
+        panStartPoint = { x: event.touches[0].clientX, y: event.touches[0].clientY };
+        panStart = { x: imagePanX, y: imagePanY };
+      }
+    }, { passive: false });
+    canvasFrame.addEventListener("touchmove", (event) => {
+      if (event.touches.length === 2 && pinchStartDistance) {
+        event.preventDefault();
+        const nextDistance = touchDistance(event.touches);
+        const nextCenter = touchCenter(event.touches);
+        imageZoom = Math.max(1, Math.min(4, pinchStartZoom * nextDistance / pinchStartDistance));
+        imagePanX = pinchStartPan.x + (nextCenter.x - pinchStartCenter.x);
+        imagePanY = pinchStartPan.y + (nextCenter.y - pinchStartCenter.y);
+        applyImageTransform();
+      } else if (event.touches.length === 1 && imageZoom > 1 && panStartPoint) {
+        event.preventDefault();
+        imagePanX = panStart.x + event.touches[0].clientX - panStartPoint.x;
+        imagePanY = panStart.y + event.touches[0].clientY - panStartPoint.y;
+        applyImageTransform();
+      }
+    }, { passive: false });
+    canvasFrame.addEventListener("touchend", () => {
+      if (imageZoom <= 1.02) resetImageTransform();
+      pinchStartDistance = 0;
+      pinchStartCenter = null;
+      panStartPoint = null;
     });
     document.addEventListener("paste", (event) => {
       const imageViewActive = !document.querySelector(".view-image").hidden;
